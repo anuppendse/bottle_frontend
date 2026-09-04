@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body { @apply bg-paper text-text font-sans; }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center gap-1.5 px-4 py-2 text-[13.5px] font-semibold rounded-md border border-transparent transition-colors whitespace-nowrap leading-tight; }
+  .btn-primary { @apply bg-accent text-white hover:bg-accent-dark disabled:bg-[#B7C4C2] disabled:cursor-not-allowed; }
+  .btn-outline { @apply bg-transparent border-line-strong text-text hover:border-accent hover:text-accent-dark hover:bg-accent-tint; }
+  .btn-ghost { @apply bg-transparent text-muted border-transparent hover:bg-[#ECEDEA] hover:text-text; }
+  .btn-danger { @apply bg-red text-white hover:bg-[#8F291F]; }
+  .btn-sm { @apply px-2.5 py-1.5 text-[12.5px]; }
+
+  .input { @apply w-full px-3 py-2 border border-line-strong rounded-md text-[13.5px] text-text bg-white outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent-tint disabled:bg-[#F2F2F0] disabled:text-muted; }
+
+  .card { @apply bg-white border border-line rounded-xl p-5; }
+  .panel-title { @apply text-[15px] font-bold text-ink-soft flex items-center gap-2; }
+
+  .lt-mono { @apply font-mono; }
+
+  .kv-row { @apply flex justify-between py-2 border-b border-line text-[13px] last:border-none; }
+  .kv-label { @apply text-muted; }
+  .kv-val { @apply font-semibold text-ink-soft text-right; }
+
+  .table-wrap { @apply overflow-x-auto; }
+  table.lt-table { @apply w-full border-collapse text-[13px]; }
+  table.lt-table th { @apply text-left text-[11.5px] font-semibold text-faint uppercase tracking-wide px-4 py-3 border-b border-line; }
+  table.lt-table td { @apply px-4 py-3 border-b border-line align-middle; }
+  table.lt-table tr:last-child td { @apply border-none; }
+
+  .badge { @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11.5px] font-semibold; }
+  .badge .dot { @apply w-1.5 h-1.5 rounded-full; }
+
+  .field { @apply mb-4; }
+  .field label { @apply block text-[12.5px] font-semibold text-ink-soft mb-1.5; }
+  .field .hint { @apply text-[11.5px] text-faint mt-1; }
+  .field .err { @apply text-[11.5px] text-red font-semibold mt-1; }
+
+  .row-link { @apply text-[12.5px] font-semibold text-accent-dark hover:underline; }
+}
