@@ -24,9 +24,15 @@ export default function ProtectedRoute({ resourceKey, children }) {
 
   const allowedRoles = ROLE_ALLOWED[resourceKey];
   const roleOk = !allowedRoles || allowedRoles.includes(user.systemRole);
+  // TEMPORARY: manufacturer bypasses the granted-permissions check the
+  // same way admin does, so Manufacturer accounts can reach every page
+  // their role is allowed to (per ROLE_ALLOWED above) even with an
+  // empty/misconfigured permissions list. Admin-only pages (setup) are
+  // unaffected. Remove "manufacturer" here once real permissions are
+  // assigned to every Manufacturer account.
   const permOk = resourceKey === "setup"
     ? user.systemRole === "admin"
-    : user.systemRole === "admin" || (user.permissions || []).includes(resourceKey);
+    : user.systemRole === "admin" || user.systemRole === "manufacturer" || (user.permissions || []).includes(resourceKey);
 
   if (!roleOk || !permOk) return <Navigate to="/access-denied" replace />;
   return children;

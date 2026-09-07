@@ -34,9 +34,17 @@ export default function Layout({ children }) {
   const location = useLocation();
 
   const isAdmin = user?.systemRole === "admin";
+  // TEMPORARY: manufacturer sees every nav item admin does (except
+  // Setup, which stays admin-only), bypassing the permissions-array
+  // check — see the matching note in ProtectedRoute.jsx and
+  // decorators.py::require_permission. Revert once real permissions
+  // are assigned to every Manufacturer account.
+  const isManufacturer = user?.systemRole === "manufacturer";
+  const bypassPermCheck = isAdmin || isManufacturer;
   const navItems = NAV_ITEMS.filter((item) => {
     if (item.key === "setup") return isAdmin; // never assignable — Admin only
-    return isAdmin || (user?.permissions || []).includes(item.key);
+    if (item.key === "csvRequests") return isAdmin; // admin-only page, not a permissions-list gap
+    return bypassPermCheck || (user?.permissions || []).includes(item.key);
   }).map((item) => (isAdmin ? item : { ...item, section: undefined }));
 
   const initials = user?.name
