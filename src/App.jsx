@@ -19,6 +19,7 @@ import CsvRequests from "./pages/CsvRequests";
 import Users from "./pages/Users";
 import AddUser from "./pages/AddUser";
 import Setup from "./pages/Setup";
+import Manufacturers from "./pages/Manufacturers";
 
 function Shell({ resourceKey, children }) {
   return (
@@ -67,6 +68,7 @@ export default function App() {
           <Route path="/users/new" element={<Shell resourceKey="users"><AddUser /></Shell>} />
           <Route path="/users/:id/edit" element={<Shell resourceKey="users"><AddUser /></Shell>} />
           <Route path="/setup" element={<Shell resourceKey="setup"><Setup /></Shell>} />
+          <Route path="/manufacturers" element={<Shell resourceKey="manufacturers"><Manufacturers /></Shell>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

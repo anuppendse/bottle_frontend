@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users as UsersIcon, Package, QrCode, Boxes, AlertTriangle,
-  Download, LogOut, ChevronDown, ClipboardList, Settings, Truck, KeyRound,
+  Download, LogOut, ChevronDown, ClipboardList, Settings, Truck, KeyRound, Factory,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { key: "csvDownloads", to: "/csv-downloads", label: "CSV Downloads", icon: Download, section: "Operate" },
   { key: "csvRequests", to: "/csv-requests", label: "Redownload Requests", icon: ClipboardList, section: "Operate" },
   { key: "users", to: "/users", label: "Users", icon: UsersIcon, section: "Admin only" },
+  { key: "manufacturers", to: "/manufacturers", label: "Manufacturers", icon: Factory, section: "Admin only" },
   { key: "setup", to: "/setup", label: "Setup", icon: Settings, section: "Admin only" },
 ];
 
@@ -24,7 +25,7 @@ const PAGE_TITLES = {
   "/dispatch-console": "Dispatch console", "/batches": "Batch management",
   "/recalls": "Recall management", "/csv-downloads": "CSV downloads",
   "/csv-requests": "Redownload requests", "/users": "Users", "/users/new": "Add user",
-  "/setup": "Setup",
+  "/setup": "Setup", "/manufacturers": "Manufacturers",
 };
 
 export default function Layout({ children }) {
@@ -44,6 +45,7 @@ export default function Layout({ children }) {
   const navItems = NAV_ITEMS.filter((item) => {
     if (item.key === "setup") return isAdmin; // never assignable — Admin only
     if (item.key === "csvRequests") return isAdmin; // admin-only page, not a permissions-list gap
+    if (item.key === "manufacturers") return isAdmin; // top-level tenant management — Admin only
     return bypassPermCheck || (user?.permissions || []).includes(item.key);
   }).map((item) => (isAdmin ? item : { ...item, section: undefined }));
 

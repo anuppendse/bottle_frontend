@@ -15,6 +15,7 @@ const ROLE_ALLOWED = {
   csvDownloads: ["admin", "manufacturer", "employee"],
   csvRequests: ["admin"],
   setup: ["admin"],
+  manufacturers: ["admin"],
 };
 
 export default function ProtectedRoute({ resourceKey, children }) {
