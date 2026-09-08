@@ -36,40 +36,12 @@ function CategoryFormModal({ title, category, onClose, onSave }) {
   );
 }
 
-function DeleteConfirmModal({ category, onClose, onConfirm }) {
-  const [error, setError] = useState("");
-
-  async function handleConfirm() {
-    try {
-      await onConfirm();
-    } catch (e) {
-      setError(e.message);
-    }
-  }
-
-  return (
-    <Modal title="Delete category" onClose={onClose}
-      footer={<>
-        <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-        <button className="btn btn-danger" onClick={handleConfirm}>Delete permanently</button>
-      </>}>
-      <div className="kv-row"><span className="kv-label">Category</span><span className="kv-val">{category.name}</span></div>
-      <div className="hint mt-3">
-        This removes the category entirely and can't be undone — blocked if any product still uses it.
-        To just hide it from new product assignments without losing history, use Deactivate instead.
-      </div>
-      {error && <div className="err mt-2">{error}</div>}
-    </Modal>
-  );
-}
-
 export default function Categories() {
   const { user } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [deleting, setDeleting] = useState(null);
   const [toast, fireToast] = useToast();
   const canEdit = user?.systemRole !== "employee";
 
@@ -103,13 +75,6 @@ export default function Categories() {
     }
   }
 
-  async function confirmDelete() {
-    await client.delete(`/categories/${deleting.id}`);
-    setRows((rs) => rs.filter((r) => r.id !== deleting.id));
-    fireToast(`${deleting.name} deleted.`);
-    setDeleting(null);
-  }
-
   return (
     <>
       <PageHead title="Categories" desc={!canEdit ? "View-only access to product categories." : "Every product is assigned one of these categories."}
@@ -134,8 +99,6 @@ export default function Categories() {
                         <button className="row-link" onClick={() => toggleStatus(c)}>
                           {c.status === "ACTIVE" ? "Deactivate" : "Activate"}
                         </button>
-                        <span className="mx-1.5 text-line-strong">·</span>
-                        <button className="row-link text-red" onClick={() => setDeleting(c)}>Delete</button>
                       </>
                     )}
                   </td>
@@ -151,7 +114,6 @@ export default function Categories() {
         <CategoryFormModal title={`Edit — ${editing.name}`} category={editing} onClose={() => setEditing(null)}
           onSave={(form) => saveEdited(editing.id, form)} />
       )}
-      {deleting && <DeleteConfirmModal category={deleting} onClose={() => setDeleting(null)} onConfirm={confirmDelete} />}
       <Toast toast={toast} />
     </>
   );
