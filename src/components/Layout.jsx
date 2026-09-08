@@ -40,8 +40,14 @@ export default function Layout({ children }) {
   // check — see the matching note in ProtectedRoute.jsx and
   // decorators.py::require_permission. Revert once real permissions
   // are assigned to every Manufacturer account.
-  const isManufacturer = user?.systemRole === "manufacturer";
-  const bypassPermCheck = isAdmin || isManufacturer;
+  // TEMPORARY: every role sees every nav item its role is otherwise
+  // allowed to reach (except Setup, Redownload Requests, and
+  // Manufacturers, which stay admin-only), bypassing the
+  // permissions-array check entirely — same treatment as the
+  // Manufacturer-only bypass before, now applied to all roles. Revert
+  // to `(user?.permissions || []).includes(item.key)` once real
+  // permissions are assigned to every account.
+  const bypassPermCheck = true;
   const navItems = NAV_ITEMS.filter((item) => {
     if (item.key === "setup") return isAdmin; // never assignable — Admin only
     if (item.key === "csvRequests") return isAdmin; // admin-only page, not a permissions-list gap

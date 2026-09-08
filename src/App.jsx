@@ -34,8 +34,14 @@ function RootRedirect() {
   if (!ready) return null;
   if (!user) return <Navigate to="/login" replace />;
   const landing = { admin: "/", manufacturer: "/", employee: "/products" };
-  if (user.systemRole !== "admin" && user.systemRole !== "manufacturer" && landing[user.systemRole] !== "/") {
-    return <Navigate to={landing[user.systemRole]} replace />;
+  // Defensive fallback: if systemRole is ever something unrecognized
+  // (missing, mis-cased, a role this map hasn't been updated for), fall
+  // back to "/" instead of indexing into `landing` and passing an
+  // undefined `to` into <Navigate> — that renders nothing and takes the
+  // whole app down with it, with no way to tell what happened.
+  const target = landing[user.systemRole] || "/";
+  if (target !== "/") {
+    return <Navigate to={target} replace />;
   }
   return (
     <Shell resourceKey="dashboard">
