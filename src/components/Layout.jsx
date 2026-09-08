@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users as UsersIcon, Package, QrCode, Boxes, AlertTriangle,
-  Download, LogOut, ChevronDown, ClipboardList, Settings, Truck, KeyRound, Factory,
+  Download, LogOut, ChevronDown, ClipboardList, Settings, Truck, KeyRound, Factory, Tags,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
   { key: "dashboard", to: "/", label: "Dashboard", icon: LayoutDashboard, section: "Overview" },
   { key: "products", to: "/products", label: "Products", icon: Package, section: "Operate" },
+  { key: "categories", to: "/categories", label: "Categories", icon: Tags, section: "Operate" },
   { key: "labelGeneration", to: "/label-generation", label: "Label Generation", icon: QrCode, section: "Operate" },
   { key: "dispatchConsole", to: "/dispatch-console", label: "Dispatch Console", icon: Truck, section: "Operate" },
   { key: "batches", to: "/batches", label: "Batch Management", icon: Boxes, section: "Operate" },
@@ -21,7 +22,7 @@ const NAV_ITEMS = [
 ];
 
 const PAGE_TITLES = {
-  "/": "Dashboard", "/products": "Products", "/label-generation": "Label generation",
+  "/": "Dashboard", "/products": "Products", "/categories": "Categories", "/label-generation": "Label generation",
   "/dispatch-console": "Dispatch console", "/batches": "Batch management",
   "/recalls": "Recall management", "/csv-downloads": "CSV downloads",
   "/csv-requests": "Redownload requests", "/users": "Users", "/users/new": "Add user",

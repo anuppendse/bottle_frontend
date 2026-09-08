@@ -20,6 +20,7 @@ import Users from "./pages/Users";
 import AddUser from "./pages/AddUser";
 import Setup from "./pages/Setup";
 import Manufacturers from "./pages/Manufacturers";
+import Categories from "./pages/Categories";
 
 function Shell({ resourceKey, children }) {
   return (
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="/users/:id/edit" element={<Shell resourceKey="users"><AddUser /></Shell>} />
           <Route path="/setup" element={<Shell resourceKey="setup"><Setup /></Shell>} />
           <Route path="/manufacturers" element={<Shell resourceKey="manufacturers"><Manufacturers /></Shell>} />
+          <Route path="/categories" element={<Shell resourceKey="products"><Categories /></Shell>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
