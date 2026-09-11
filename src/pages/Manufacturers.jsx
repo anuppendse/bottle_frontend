@@ -9,26 +9,38 @@ import EmptyState from "../components/EmptyState";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 
-const CODE_TYPES = ["QR Code", "Barcode", "Both"];
-const GENERATION_LEVELS = ["Batch-level", "Unit-level"];
+const CODE_TYPES = ["QR", "BARCODE", "BOTH"];
+const GENERATION_LEVELS = ["BATCH", "UNIT"];
 
 function ManufacturerFormModal({ title, manufacturer, onClose, onSave }) {
   const [name, setName] = useState(manufacturer?.name || "");
-  const [codeType, setCodeType] = useState(manufacturer?.defaultCodeType || "Both");
-  const [generationLevel, setGenerationLevel] = useState(manufacturer?.defaultGenerationLevel || "Unit-level");
+  const [codeType, setCodeType] = useState(manufacturer?.codeType || "BOTH");
+  const [generationLevel, setGenerationLevel] = useState(manufacturer?.generationLevel || "UNIT");
+  const [companyName, setCompanyName] = useState(manufacturer?.companyName || "");
+  const [gstin, setGstin] = useState(manufacturer?.gstin || "");
+  const [contactEmail, setContactEmail] = useState(manufacturer?.contactEmail || "");
+  const [contactPhone, setContactPhone] = useState(manufacturer?.contactPhone || "");
   const [error, setError] = useState("");
 
   async function handleSave() {
     if (!name.trim()) { setError("Manufacturer name is required."); return; }
     try {
-      await onSave({ name: name.trim(), defaultCodeType: codeType, defaultGenerationLevel: generationLevel });
+      await onSave({
+        name: name.trim(),
+        codeType,
+        generationLevel,
+        companyName: companyName.trim() || null,
+        gstin: gstin.trim() || null,
+        contactEmail: contactEmail.trim() || null,
+        contactPhone: contactPhone.trim() || null,
+      });
     } catch (e) {
       setError(e.message);
     }
   }
 
   return (
-    <Modal title={title} width={480} onClose={onClose}
+    <Modal title={title} width={520} onClose={onClose}
       footer={<>
         <button className="btn btn-outline" onClick={onClose}>Cancel</button>
         <button className="btn btn-primary" onClick={handleSave}>Save manufacturer</button>
@@ -36,15 +48,29 @@ function ManufacturerFormModal({ title, manufacturer, onClose, onSave }) {
       <Field label="Manufacturer name" error={error}>
         <input className="input" placeholder="e.g. Kaveri Lubricants Pvt Ltd" value={name} onChange={(e) => setName(e.target.value)} />
       </Field>
+
       <div className="field">
         <label>Default code type</label>
         <Segmented options={CODE_TYPES} value={codeType} onChange={setCodeType} />
-        <div className="hint mt-1.5">Used as the starting choice on Label Generation for this manufacturer's batches.</div>
       </div>
       <div className="field">
         <label>Default generation level</label>
         <Segmented options={GENERATION_LEVELS} value={generationLevel} onChange={setGenerationLevel} />
-        <div className="hint mt-1.5">Batch-level mints one code per batch; Unit-level mints one per unit.</div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-x-5">
+        <Field label="Company name">
+          <input className="input" placeholder="Legal company name" value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
+        </Field>
+        <Field label="GSTIN">
+          <input className="input lt-mono" placeholder="e.g. 27AACCK1234F1Z5" value={gstin} onChange={(e) => setGstin(e.target.value)} />
+        </Field>
+        <Field label="Contact email">
+          <input className="input" placeholder="ops@company.com" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+        </Field>
+        <Field label="Contact phone">
+          <input className="input" placeholder="+91 20 1234 5678" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
+        </Field>
       </div>
     </Modal>
   );
@@ -69,8 +95,8 @@ function DeleteConfirmModal({ manufacturer, onClose, onConfirm }) {
         <button className="btn btn-danger" disabled={blocked} onClick={handleConfirm}>Delete</button>
       </>}>
       <div className="kv-row"><span className="kv-label">Manufacturer</span><span className="kv-val">{manufacturer.name}</span></div>
-      <div className="kv-row"><span className="kv-label">Products</span><span className="kv-val">{manufacturer.productsCount}</span></div>
-      <div className="kv-row"><span className="kv-label">Users</span><span className="kv-val">{manufacturer.usersCount}</span></div>
+      <div className="kv-row"><span className="kv-label">Products</span><span className="kv-val">{manufacturer.productsCount ?? 0}</span></div>
+      <div className="kv-row"><span className="kv-label">Users</span><span className="kv-val">{manufacturer.usersCount ?? 0}</span></div>
       {blocked ? (
         <div className="err mt-3">This manufacturer still has products and/or users attached — reassign or remove them first.</div>
       ) : (
@@ -118,7 +144,7 @@ export default function Manufacturers() {
 
   return (
     <>
-      <PageHead eyebrow="Admin only" title="Manufacturers" desc="Every manufacturer organization on the platform, and their default label settings."
+      <PageHead eyebrow="Admin only" title="Manufacturers" desc="Every manufacturer organization on the platform, and their default label + contact details."
         action={<button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> Add manufacturer</button>} />
 
       {!loading && rows.length === 0 ? (
@@ -126,15 +152,15 @@ export default function Manufacturers() {
       ) : (
         <div className="card table-wrap">
           <table className="lt-table">
-            <thead><tr><th>Name</th><th>Code type</th><th>Generation level</th><th>Products</th><th>Users</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Company name</th><th>Code type</th><th>Generation level</th><th>Contact</th><th></th></tr></thead>
             <tbody>
               {!loading && rows.map((m) => (
                 <tr key={m.id}>
                   <td>{m.name}</td>
-                  <td>{m.defaultCodeType}</td>
-                  <td>{m.defaultGenerationLevel}</td>
-                  <td>{m.productsCount}</td>
-                  <td>{m.usersCount}</td>
+                  <td>{m.companyName || "—"}</td>
+                  <td>{m.codeType}</td>
+                  <td>{m.generationLevel}</td>
+                  <td>{m.contactEmail || m.contactPhone || "—"}</td>
                   <td>
                     <button className="row-link" onClick={() => setEditing(m)}>Edit</button>
                     <span className="mx-1.5 text-line-strong">·</span>
