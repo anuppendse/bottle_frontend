@@ -5,11 +5,7 @@ import { useAuth } from "../context/AuthContext";
 
 const LANDING = { admin: "/", manufacturer: "/", employee: "/products" };
 
-const DEMO_ACCOUNTS = [
-  { role: "admin", label: "Admin", note: "Full access", email: "rhea.deshmukh@labeltrack.com" },
-  { role: "manufacturer", label: "Manufacturer", note: "Scoped to own data", email: "arjun.p@kaverilube.com" },
-  { role: "employee", label: "Employee", note: "Products (view) + downloads", email: "manoj.iyer@kaverilube.com" },
-];
+
 
 export default function Login() {
   const { login } = useAuth();
@@ -35,20 +31,7 @@ export default function Login() {
     }
   }
 
-  async function quickLogin(demoEmail) {
-    setEmail(demoEmail);
-    setPw("Demo@123");
-    setBusy(true);
-    setError("");
-    try {
-      const user = await login(demoEmail, "Demo@123");
-      navigate(LANDING[user.systemRole] || "/");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-ink"
@@ -88,25 +71,7 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-[22px] mb-1.5 pt-4 border-t border-line">
-          <div className="text-[11.5px] font-semibold text-faint mb-2">DEMO ACCOUNTS</div>
-          <div className="grid grid-cols-2 gap-2 mt-1.5">
-            {DEMO_ACCOUNTS.map((d) => (
-              <button
-                key={d.role}
-                type="button"
-                className="border border-line-strong bg-white rounded-md px-2 py-2 text-[11.5px] font-semibold text-ink-soft text-left hover:border-accent hover:bg-accent-tint"
-                onClick={() => quickLogin(d.email)}
-              >
-                {d.label}
-                <span className="block text-[10px] text-faint font-medium mt-px">{d.note}</span>
-              </button>
-            ))}
-          </div>
-          <div className="text-[11px] text-faint mt-2.5">
-            Every seeded account signs in with the password <span className="lt-mono">Demo@123</span>.
-          </div>
-        </div>
+        
       </div>
     </div>
   );
