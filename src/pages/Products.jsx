@@ -7,10 +7,23 @@ import Modal from "../components/Modal";
 import Field from "../components/Field";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
+import Badge from "../components/Badge";
 
-function ProductFormModal({ title, product, categories, onClose, onSave }) {
+function StatusBadge({ status }) {
+  const isActive = status === "ACTIVE";
+  return (
+    <span className={`status-pill ${isActive ? "status-pill--active" : "status-pill--inactive"}`}>
+      <span className="status-pill__dot" />
+      {isActive ? "Active" : "Inactive"}
+    </span>
+  );
+}
+
+// function ProductFormModal({ title, product, categories, onClose, onSave }) {
+function ProductFormModal({ title, product, categories, manufacturers, onClose, onSave }) {
   const [name, setName] = useState(product?.name || "");
   const [categoryId, setCategoryId] = useState(product?.categoryId || categories[0]?.id || "");
+  const [manufacturerId, setManufacturerId] = useState(product?.manufacturerId || manufacturers[0]?.id || "");
   const [desc, setDesc] = useState(product?.desc || "");
   const [shelfLifeMonths, setShelfLifeMonths] = useState(product?.shelfLifeMonths || "");
   const [error, setError] = useState("");
@@ -18,9 +31,11 @@ function ProductFormModal({ title, product, categories, onClose, onSave }) {
   async function handleSave() {
     if (!name.trim()) { setError("Product name is required."); return; }
     if (!categoryId) { setError("Select a category."); return; }
+    if (!manufacturerId) { setError("Select a manufacturer."); return; }
     if (!shelfLifeMonths || Number(shelfLifeMonths) <= 0) { setError("Enter a valid shelf life in months."); return; }
     try {
-      await onSave({ name, categoryId, desc, shelfLifeMonths: Number(shelfLifeMonths) });
+      // await onSave({ name, categoryId, desc, shelfLifeMonths: Number(shelfLifeMonths) });
+      await onSave({ name, categoryId, manufacturerId, desc, shelfLifeMonths: Number(shelfLifeMonths) });
     } catch (e) {
       setError(e.message);
     }
@@ -43,6 +58,11 @@ function ProductFormModal({ title, product, categories, onClose, onSave }) {
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
+        <Field label="Manufacturer">
+          <select className="input" value={manufacturerId} onChange={(e) => setManufacturerId(e.target.value)}>
+            {manufacturers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </Field>
         <Field label="Shelf life (months)" hint="Owned directly by the product — no manufacturer fallback.">
           <input className="input" type="number" placeholder="e.g. 24" value={shelfLifeMonths} onChange={(e) => setShelfLifeMonths(e.target.value)} />
         </Field>
@@ -60,17 +80,26 @@ export default function Products() {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [manufacturers, setManufacturers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(null);
   const [toast, fireToast] = useToast();
   const canEdit = user?.systemRole !== "employee";
 
+  // function load() {
+  //   setLoading(true);
+  //   Promise.all([client.get("/products"), client.get("/categories")])
+  //     .then(([p, c]) => { setProducts(p.data); setCategories(c.data); })
+  //     .finally(() => setLoading(false));
+  // }
+  // useEffect(load, []);
+
   function load() {
-    setLoading(true);
-    Promise.all([client.get("/products"), client.get("/categories")])
-      .then(([p, c]) => { setProducts(p.data); setCategories(c.data); })
-      .finally(() => setLoading(false));
+  setLoading(true);
+  Promise.all([client.get("/products"), client.get("/categories"), client.get("/manufacturers")])
+    .then(([p, c, m]) => { setProducts(p.data); setCategories(c.data); setManufacturers(m.data); })
+    .finally(() => setLoading(false));
   }
   useEffect(load, []);
 
@@ -88,6 +117,17 @@ export default function Products() {
     fireToast("Product updated.");
   }
 
+  async function toggleStatus(product) {
+  const nextStatus = product.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+  try {
+    const res = await client.patch(`/products/${product.id}/status`, { status: nextStatus });
+    setProducts((ps) => ps.map((p) => (p.id === product.id ? res.data : p)));
+    fireToast(nextStatus === "ACTIVE" ? "Product activated." : "Product deactivated.");
+  } catch (e) {
+    fireToast(e.message || "Failed to update product status.");
+  }
+}
+
   return (
     <>
       <PageHead
@@ -97,7 +137,7 @@ export default function Products() {
       />
       <div className="card table-wrap">
         <table className="lt-table">
-          <thead><tr><th>Name</th><th>Category</th><th>First batch</th><th>Last batch</th><th>Shelf life</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Category</th><th>First batch</th><th>Last batch</th><th>Shelf life</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {!loading && products.map((p) => (
               <tr key={p.id}>
@@ -106,7 +146,16 @@ export default function Products() {
                 <td className="lt-mono">{p.firstBatch === "—" ? "—" : p.firstBatch.slice(0, 8)}</td>
                 <td className="lt-mono">{p.lastBatch === "—" ? "—" : p.lastBatch.slice(0, 8)}</td>
                 <td>{p.shelfLifeMonths} months</td>
-                <td>{canEdit && <button className="row-link" onClick={() => setEditing(p)}>Edit →</button>}</td>
+                <td><Badge status={p.status === "ACTIVE" ? "Active" : "Inactive"} /></td>
+                {/* <td>{canEdit && <button className="row-link" onClick={() => setEditing(p)}>Edit →</button>}</td> */}
+                <td>
+                  {canEdit && (
+                    <div className="flex items-center gap-3">
+                      <button className="row-link" onClick={() => setEditing(p)}>Edit →</button>
+                      <button className={`row-link ${p.status === "ACTIVE" ? "text-red" : "text-green"}`} onClick={() => toggleStatus(p)}>  {p.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>
+                    </div>
+                   )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -114,10 +163,16 @@ export default function Products() {
         {!loading && products.length === 0 && <div className="p-8 text-center text-muted text-sm">No products yet.</div>}
       </div>
 
-      {showCreate && <ProductFormModal title="Add product" categories={categories} onClose={() => setShowCreate(false)} onSave={saveNewProduct} />}
+      {/* {showCreate && <ProductFormModal title="Add product" categories={categories} onClose={() => setShowCreate(false)} onSave={saveNewProduct} />}
       {editing && (
         <ProductFormModal title={`Edit product — ${editing.name}`} product={editing} categories={categories} onClose={() => setEditing(null)}
           onSave={(form) => saveEditedProduct(editing.id, form)} />
+      )} */}
+
+      {showCreate && <ProductFormModal title="Add product" categories={categories} manufacturers={manufacturers} onClose={() => setShowCreate(false)} onSave={saveNewProduct} />}
+        {editing && (
+          <ProductFormModal title={`Edit product — ${editing.name}`} product={editing} categories={categories} manufacturers={manufacturers} onClose={() => setEditing(null)}
+            onSave={(form) => saveEditedProduct(editing.id, form)} />
       )}
       <Toast toast={toast} />
     </>
