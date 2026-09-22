@@ -26,7 +26,7 @@ export default function DispatchConsole() {
       }
 
       // Clear selection if the previously selected batch
-      // is no longer READY TO DISPATCH.
+      // is no longer In Production.
       if (
         batchNo &&
         !res.data.some((b) => b.batch === batchNo)

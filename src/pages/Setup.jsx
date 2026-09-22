@@ -2,107 +2,284 @@ import React, { useEffect, useState } from "react";
 import client from "../api/client";
 import PageHead from "../components/PageHead";
 import Field from "../components/Field";
-import Segmented from "../components/Segmented";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 
 export default function Setup() {
-  const [manufacturers, setManufacturers] = useState([]);
-  const [manufacturerId, setManufacturerId] = useState("");
-  const [codeType, setCodeType] = useState("Both");
-  const [genLevel, setGenLevel] = useState("Unit-level");
-  const [companyName, setCompanyName] = useState("");
-  const [gstin, setGstin] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
   const [toast, fireToast] = useToast();
 
+  // -------- Create role permission (dropdown + Add) --------
+  const [permissionKeys, setPermissionKeys] = useState([]);
+  const [selectedPermissionId, setSelectedPermissionId] = useState("");
+  const [rpRows, setRpRows] = useState([]);
+
   useEffect(() => {
-    client.get("/setup/manufacturers").then((res) => {
-      setManufacturers(res.data);
-      if (res.data.length) setManufacturerId(res.data[0].id);
+    client.get("/permissions/keys").then((res) => {
+      setPermissionKeys(res.data);
+
+      if (res.data.length) {
+        setSelectedPermissionId(String(res.data[0].id));
+      }
     });
   }, []);
 
-  useEffect(() => {
-    if (!manufacturerId) return;
-    client.get(`/setup?manufacturerId=${manufacturerId}`).then((res) => {
-      const d = res.data;
-      setCodeType(d.defaultCodeType || "Both");
-      setGenLevel(d.defaultGenerationLevel || "Unit-level");
-      setCompanyName(d.companyName || "");
-      setGstin(d.gstin || "");
-      setContactEmail(d.contactEmail || "");
-      setContactPhone(d.contactPhone || "");
-    });
-  }, [manufacturerId]);
+  async function handleAdd() {
+    if (!selectedPermissionId) return;
 
-  async function saveDefaults() {
     try {
-      await client.put("/setup", { manufacturerId, defaultCodeType: codeType, defaultGenerationLevel: genLevel });
-      fireToast("System defaults saved.");
+      const res = await client.post("/permissions/role-permissions", {
+        id: Number(selectedPermissionId),
+      });
+
+      console.log("Role permission API response:", res.data);
+
+      if (Array.isArray(res.data.rp)) {
+        setRpRows(res.data.rp);
+        setHasSetOnce(false);
+        fireToast("Role permission rows ready.");
+        fetchTree(); // keep the All role permissions table in sync immediately
+        return;
+      }
+
+      if (res.data.message) {
+        fireToast(res.data.message, "err");
+        setRpRows([]);
+        return;
+      }
+
+      setRpRows([]);
+
+      fireToast("Role permission rows were not returned by the server.", "err");
     } catch (e) {
-      fireToast(e.message, "err");
+      console.error("Add role permission error:", e);
+
+      fireToast(
+        e.response?.data?.error || e.response?.data?.message || e.message,
+        "err",
+      );
     }
   }
 
-  async function saveProfile() {
+  const [isSettingPermission, setIsSettingPermission] = useState(false);
+  const [hasSetOnce, setHasSetOnce] = useState(false);
+
+  // -------- UPDATE ROLE PERMISSION LOCALLY --------
+  function handlePermissionToggle(node, granted) {
+    setTree((prevTree) => {
+      const updatedTree = { ...prevTree };
+
+      updatedTree[node.role || selectedRole] = (
+        updatedTree[node.role || selectedRole] || []
+      ).map((permission) => {
+        if (permission.id === node.id) {
+          return {
+            ...permission,
+            granted: granted,
+          };
+        }
+
+        return permission;
+      });
+
+      return updatedTree;
+    });
+  }
+
+  // -------- SAVE ALL ROLE PERMISSIONS --------
+  async function handleSavePermissions() {
+    if (!selectedRole) return;
+
+    const permissions = tree[selectedRole] || [];
+
+    const role_permission_ids = permissions.map((permission) => permission.id);
+
+    const granted_perms = permissions.map((permission) => !!permission.granted);
+
     try {
-      await client.put("/setup", { manufacturerId, companyName, gstin, contactEmail, contactPhone });
-      fireToast("Company profile saved.");
+      const res = await client.patch("/permissions/role-permissions", {
+        role_permission_ids,
+        granted_perms,
+      });
+
+      console.log("Permissions updated:", res.data);
+
+      fireToast("Permissions updated successfully.");
     } catch (e) {
-      fireToast(e.message, "err");
+      console.error("Permission update error:", e);
+
+      fireToast(
+        e.response?.data?.error || e.response?.data?.message || e.message,
+        "err",
+      );
     }
+  }
+
+  // -------- Full role-permission tree (read-only except granted checkbox) --------
+  const [tree, setTree] = useState({});
+  const [selectedRole, setSelectedRole] = useState("");
+
+  function fetchTree() {
+    return client
+      .get("/permissions")
+      .then((res) => {
+        setTree(res.data);
+      })
+      .catch((e) => {
+        console.error("Error fetching permissions:", e);
+      });
+  }
+
+  useEffect(() => {
+    fetchTree(); // initial load only
+  }, []);
+
+  function handleRoleChange(e) {
+    setSelectedRole(e.target.value);
+    fetchTree(); // always refetch, even if the value didn't change
   }
 
   return (
     <>
-      <PageHead eyebrow="Admin only" title="Setup"
-        desc="System defaults, company profile, and branding for the public verification page — configured separately for each manufacturer." />
+      <PageHead
+        eyebrow="Admin only"
+        title="Roles & Permissions"
+        desc="Create role permissions for a chosen permission, then set them into the role permission table."
+      />
 
+      {/* Create role permission */}
       <div className="card mb-5">
-        <Field label="Manufacturer" hint="Defaults and company profile below apply only to the selected manufacturer.">
-          <select className="input max-w-sm" value={manufacturerId} onChange={(e) => setManufacturerId(e.target.value)}>
-            {manufacturers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+        <div className="panel-title mb-4.5">Create role permission</div>
+
+        <Field
+          label="Permission"
+          hint="Pick a permission and click Add to make sure Admin, Manufacturer, and Employee each have a row for it."
+        >
+          <div className="flex items-center gap-3">
+            <select
+              className="input max-w-sm"
+              value={selectedPermissionId}
+              onChange={(e) => setSelectedPermissionId(e.target.value)}
+            >
+              {permissionKeys.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label || p.key}
+                </option>
+              ))}
+            </select>
+
+            <button
+              className="btn btn-primary"
+              onClick={handleAdd}
+              disabled={!selectedPermissionId}
+            >
+              Add
+            </button>
+          </div>
+        </Field>
+
+        {rpRows.length > 0 && (
+          <>
+            <table className="w-full text-sm mt-4">
+              <thead>
+                <tr className="text-left text-faint">
+                  <th className="pb-2">Permission</th>
+                  <th className="pb-2">role</th>
+                  <th className="pb-2">granted</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {rpRows.map((row) => (
+                  <tr key={row.id} className="border-t border-line">
+                    <td className="py-2">
+                      {permissionKeys.find(
+                        (p) => Number(p.id) === Number(selectedPermissionId),
+                      )?.label || row.key}
+                    </td>
+
+                    <td className="py-2">{row.role}</td>
+
+                    <td className="py-2">
+                      <input
+                        type="checkbox"
+                        checked={!!row.granted}
+                        disabled
+                        readOnly
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
+      {/* Full role-permission tree */}
+      <div className="card">
+        <div className="panel-title mb-4.5">All role permissions</div>
+
+        <Field label="Role">
+          <select
+            className="input max-w-sm"
+            value={selectedRole}
+            onChange={handleRoleChange}
+          >
+            <option value="">Select a role</option>
+
+            {Object.keys(tree).map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
           </select>
         </Field>
+
+        {selectedRole && (
+          <>
+            <table className="w-full text-sm mt-4">
+              <thead>
+                <tr className="text-left text-faint">
+                  <th className="pb-2">Role</th>
+                  <th className="pb-2">Label</th>
+                  <th className="pb-2">Granted</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {(tree[selectedRole] || []).map((node) => (
+                  <tr key={node.id} className="border-t border-line">
+                    <td className="py-2">{selectedRole}</td>
+                    <td className="py-2">{node.label}</td>
+
+                    <td className="py-2">
+                      <input
+                        type="checkbox"
+                        checked={!!node.granted}
+                        onChange={(e) =>
+                          handlePermissionToggle(node, e.target.checked)
+                        }
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Save button - visible only when a role is selected */}
+            <div className="mt-5 pt-4 border-t border-line flex justify-end">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleSavePermissions}
+              >
+                Save
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="card mb-5">
-        <div className="flex items-center justify-between mb-4.5">
-          <div className="panel-title">System defaults</div>
-          <span className="text-xs text-faint">Encrypted at rest · applies to this manufacturer's new batches</span>
-        </div>
-        <div className="flex items-start justify-between gap-10 flex-wrap mb-1">
-          <div className="flex-1 min-w-[220px]">
-            <div className="text-[12.5px] font-semibold text-ink-soft mb-2.5">Default code type</div>
-            <Segmented options={["QR Code", "Barcode", "Both"]} value={codeType} onChange={setCodeType} />
-          </div>
-          <div className="flex-1 min-w-[220px]">
-            <div className="text-[12.5px] font-semibold text-ink-soft mb-2.5">Default generation level</div>
-            <Segmented options={["Batch-level", "Unit-level"]} value={genLevel} onChange={setGenLevel} />
-          </div>
-        </div>
-        <div className="mt-2">
-          <button className="btn btn-primary" onClick={saveDefaults} disabled={!manufacturerId}>Save defaults</button>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="panel-title mb-4.5">Company profile</div>
-        <div className="grid grid-cols-2 gap-x-5">
-          <Field label="Company name"><input className="input" value={companyName} onChange={(e) => setCompanyName(e.target.value)} /></Field>
-          <Field label="GSTIN / registration no."><input className="input lt-mono" value={gstin} onChange={(e) => setGstin(e.target.value)} /></Field>
-          <Field label="Contact email"><input className="input" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></Field>
-          <Field label="Contact phone"><input className="input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></Field>
-          <div className="col-span-2">
-            <Field label="Public verify page branding" hint="Logo file and accent color — shown on the /verify/:token public page.">
-              <input className="input" placeholder="Upload a logo file and choose an accent color" disabled />
-            </Field>
-          </div>
-        </div>
-        <button className="btn btn-primary" onClick={saveProfile} disabled={!manufacturerId}>Save profile</button>
-      </div>
       <Toast toast={toast} />
     </>
   );
