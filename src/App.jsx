@@ -6,6 +6,7 @@ import Layout from "./components/Layout";
 
 import Login from "./pages/Login";
 import Verify from "./pages/Verify";
+import ScanVerify from "./pages/ScanVerify";
 import AccessDenied from "./pages/AccessDenied";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/verify" element={<Verify />} />
           <Route path="/verify/:token" element={<Verify />} />
+          <Route path="/scan/:token" element={<ScanVerify />} />
           <Route path="/access-denied" element={<AccessDenied />} />
 
           <Route path="/" element={<RootRedirect />} />
