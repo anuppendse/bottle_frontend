@@ -10,7 +10,7 @@ import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 
 const CODE_TYPES = ["QR", "BARCODE", "BOTH"];
-const GENERATION_LEVELS = ["BATCH", "UNIT"];
+const GENERATION_LEVELS = ["BATCH", "UNIT", "BOTH"];
 
 function ManufacturerFormModal({ title, manufacturer, onClose, onSave }) {
   const [name, setName] = useState(manufacturer?.name || "");
