@@ -12,9 +12,9 @@ import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import DetailPage from "./pages/DetailPage";
 import LabelGeneration from "./pages/LabelGeneration";
-import DispatchConsole from "./pages/DispatchConsole";
+// import DispatchConsole from "./pages/DispatchConsole";
 import Batches from "./pages/Batches";
-import Recalls from "./pages/Recalls";
+// import Recalls from "./pages/Recalls";
 import CsvDownloads from "./pages/CsvDownloads";
 import CsvRequests from "./pages/CsvRequests";
 import Users from "./pages/Users";
@@ -67,10 +67,10 @@ export default function App() {
           <Route path="/products" element={<Shell resourceKey="products"><Products /></Shell>} />
           <Route path="/products/:id" element={<Shell resourceKey="products"><DetailPage /></Shell>} />
           <Route path="/label-generation" element={<Shell resourceKey="labelGeneration"><LabelGeneration /></Shell>} />
-          <Route path="/dispatch-console" element={<Shell resourceKey="dispatchConsole"><DispatchConsole /></Shell>} />
+          {/* <Route path="/dispatch-console" element={<Shell resourceKey="dispatchConsole"><DispatchConsole /></Shell>} /> */}
           <Route path="/batches" element={<Shell resourceKey="batches"><Batches /></Shell>} />
           <Route path="/batches/:id" element={<Shell resourceKey="batches"><DetailPage /></Shell>} />
-          <Route path="/recalls" element={<Shell resourceKey="recalls"><Recalls /></Shell>} />
+          {/* <Route path="/recalls" element={<Shell resourceKey="recalls"><Recalls /></Shell>} /> */}
           <Route path="/csv-downloads" element={<Shell resourceKey="csvDownloads"><CsvDownloads /></Shell>} />
           <Route path="/csv-requests" element={<Shell resourceKey="csvRequests"><CsvRequests /></Shell>} />
           <Route path="/users" element={<Shell resourceKey="users"><Users /></Shell>} />
