@@ -32,13 +32,19 @@ export default function AddUser() {
   const [permissions, setPermissions] = useState([]);
   const [error, setError] = useState("");
 
-  // Admin needs a manufacturer picker when the role is Manufacturer/Employee
+  // Admin needs a manufacturer picker when the role is Employee
   // (Manufacturer-role actors are already scoped to their own org).
   useEffect(() => {
     if (!restricted) {
       client
-        .get("/setup/manufacturers")
-        .then((res) => setManufacturers(res.data))
+        .get("/users")
+        .then((res) => {
+          const manufacturerUsers = res.data.filter(
+            (user) => user.role?.toUpperCase() === "MANUFACTURER",
+          );
+
+          setManufacturers(manufacturerUsers);
+        })
         .catch(() => {});
     }
   }, [restricted]);
@@ -88,12 +94,15 @@ export default function AddUser() {
       const payload = {
         name,
         email,
+        username: email,
         role,
         permissions,
         password: password || undefined,
       };
-      if (!restricted && role !== "Admin")
-        payload.manufacturerId = manufacturerId;
+
+      if (!restricted && role === "Employee")
+        payload.manufacturer_id = manufacturerId;
+
       if (editing) {
         await client.put(`/users/${id}`, payload);
       } else {
@@ -193,11 +202,13 @@ export default function AddUser() {
               onChange={(e) => setManufacturerId(e.target.value)}
             >
               <option value="">Select a manufacturer…</option>
-              {manufacturers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
+              {manufacturers
+                .filter((m) => m.manufacturerId)
+                .map((m) => (
+                  <option key={m.manufacturerId} value={m.manufacturerId}>
+                    {m.name}
+                  </option>
+                ))}
             </select>
           </Field>
         )}

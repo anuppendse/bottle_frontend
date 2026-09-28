@@ -15,7 +15,10 @@ export default function Users() {
 
   function load() {
     setLoading(true);
-    client.get("/users").then((res) => setUsers(res.data)).finally(() => setLoading(false));
+    client
+      .get("/users")
+      .then((res) => setUsers(res.data))
+      .finally(() => setLoading(false));
   }
   useEffect(load, []);
 
@@ -30,29 +33,74 @@ export default function Users() {
 
   return (
     <>
-      <PageHead title="Users" desc="Every account with access to LabelTrack, and the role assigned to it."
-        action={<button className="btn btn-primary" onClick={() => navigate("/users/new")}><Plus size={15} /> Add user</button>} />
+      <PageHead
+        title="Users"
+        desc="Every account with access to LabelTrack, and the role assigned to it."
+        action={
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate("/users/new")}
+          >
+            <Plus size={15} /> Add user
+          </button>
+        }
+      />
       <div className="card table-wrap">
         <table className="lt-table">
-          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Manufacturer</th><th>Status</th><th></th></tr></thead>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              
+              <th>Role</th>
+              <th>Manufacturer</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
           <tbody>
-            {!loading && users.map((u) => (
-              <tr key={u.id}>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>{u.role}</td>
-                <td>{u.manufacturer}</td>
-                <td><Badge status={u.status} /></td>
-                <td>
-                  <button className="row-link" onClick={() => navigate(`/users/${u.id}/edit`)}>Edit</button>
-                  <span className="mx-1.5 text-line-strong">·</span>
-                  <button className="row-link" onClick={() => toggle(u)}>{u.status === "Active" ? "Deactivate" : "Activate"}</button>
-                </td>
-              </tr>
-            ))}
+            {!loading &&
+              [
+                ...users.filter(
+                  (u) => String(u.status).toUpperCase() === "ACTIVE",
+                ),
+                ...users.filter(
+                  (u) => String(u.status).toUpperCase() !== "ACTIVE",
+                ),
+              ].map((u) => (
+                <tr key={u.id}>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  
+                  <td>{u.role}</td>
+                  <td>{u.manufacturer}</td>
+
+                  <td>
+                    <Badge status={u.status} />
+                  </td>
+                  <td>
+                    <button
+                      className="row-link"
+                      onClick={() => navigate(`/users/${u.id}/edit`)}
+                    >
+                      Edit
+                    </button>
+                    <span className="mx-1.5 text-line-strong">·</span>
+                    <button className="row-link" onClick={() => toggle(u)}>
+                      {u.status?.toUpperCase() === "ACTIVE"
+                        ? "Deactivate"
+                        : "Activate"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
           </tbody>
         </table>
-        {!loading && users.length === 0 && <div className="p-8 text-center text-muted text-sm">No users yet.</div>}
+        {!loading && users.length === 0 && (
+          <div className="p-8 text-center text-muted text-sm">
+            No users yet.
+          </div>
+        )}
       </div>
       <Toast toast={toast} />
     </>
