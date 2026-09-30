@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { QrCode, Barcode, CheckCircle2, Download, Printer } from "lucide-react";
+import { QrCode, Barcode, CheckCircle2 } from "lucide-react";
 import client from "../api/client";
 import PageHead from "../components/PageHead";
 import Field from "../components/Field";
@@ -71,16 +71,7 @@ export default function LabelGeneration() {
     }
   }
 
-  async function downloadCsv() {
-    if (!result) return;
-    const res = await client.get(`/labels/${result.batch.batch}/csv`, { responseType: "blob" });
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${result.batch.batch}-codes.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+
 
   return (
     <>
@@ -96,37 +87,36 @@ export default function LabelGeneration() {
               onChange={(e) => { setSelectedProductId(e.target.value); setJob(null); }}
             >
               <option value="">Select a product…</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
+             {products.filter((p) => p.status === "ACTIVE").map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+))}
+            
             </select>
           </Field>
 
-          <div className="field">
-            <label>Code type</label>
-            <div className="inline-flex border border-line-strong rounded-md overflow-hidden opacity-50">
-              {["QR", "BARCODE"].map((o) => {
-                const isActive =
-                  manufacturerCodeType === "BOTH" ? true : manufacturerCodeType === o;
-                return (
-                  <div
-                    key={o}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold border-r last:border-r-0 border-line-strong ${
-                      isActive ? "bg-accent-tint text-accent-dark" : "bg-white text-muted"
-                    }`}
-                  >
-                    {o === "QR" ? <QrCode size={14} /> : <Barcode size={14} />}
-                    {o}
-                  </div>
-                );
-              })}
+          {manufacturerCodeType && (
+            <div className="field">
+              <label>Code type</label>
+              <div className="inline-flex border border-line-strong rounded-md overflow-hidden opacity-50">
+                {["QR", "BARCODE"].map((o) => {
+                  const isActive =
+                    manufacturerCodeType === "BOTH" ? true : manufacturerCodeType === o;
+                  return (
+                    <div
+                      key={o}
+                      className={`flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold border-r last:border-r-0 border-line-strong ${
+                        isActive ? "bg-accent-tint text-accent-dark" : "bg-white text-muted"
+                      }`}
+                    >
+                      {o === "QR" ? <QrCode size={14} /> : <Barcode size={14} />}
+                      {o}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="hint mt-1.5">Set by the manufacturer's configuration — can't be changed here.</div>
             </div>
-            <div className="hint mt-1.5">
-              {manufacturerCodeType ? "Set by the manufacturer's configuration — can't be changed here." : "Select a product to see this manufacturer's code type."}
-            </div>
-          </div>
-
-
+          )}
 
           {manufacturerLevel && (
             <div className="field">
@@ -174,14 +164,13 @@ export default function LabelGeneration() {
               <div className="kv-row"><span className="kv-label">Generation level</span><span className="kv-val capitalize">{result.batch.generationLevel}-level</span></div>
               <div className="kv-row"><span className="kv-label">Number of codes minted</span><span className="kv-val">{result.codesGenerated.toLocaleString()}</span></div>
               <div className="kv-row"><span className="kv-label">Status</span><span className="kv-val"><Badge status="ACTIVE" /></span></div>
-              <div className="mt-4 mb-2 text-xs font-bold text-faint">TOKEN PREVIEW</div>
+                <div className="mt-4 mb-2 text-xs font-bold text-faint">TOKEN PREVIEW</div>
               <div className="bg-[#FAFAF8] border border-line rounded-md px-3 py-2.5">
                 {result.previewTokens.map((t) => <div key={t} className="lt-mono text-[12.5px] py-0.5">{t}</div>)}
                 <div className="text-xs text-faint mt-1">+{result.codesGenerated - result.previewTokens.length} more in the full export</div>
               </div>
-              <div className="flex gap-2.5 mt-4.5">
-                <button className="btn btn-outline"><Printer size={14} /> Print sheet</button>
-                <button className="btn btn-primary" onClick={downloadCsv}><Download size={14} /> Download CSV</button>
+              <div className="hint mt-4.5">
+                Head to <strong>CSV Downloads</strong> in the sidebar to download or print this batch's codes.
               </div>
             </>
           )}
