@@ -6,6 +6,8 @@ import Modal from "../components/Modal";
 import Field from "../components/Field";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
+import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 
 export default function CsvRequests() {
   const [rows, setRows] = useState([]);
@@ -13,6 +15,9 @@ export default function CsvRequests() {
   const [noteFor, setNoteFor] = useState(null);
   const [note, setNote] = useState("");
   const [toast, fireToast] = useToast();
+  const { can } = useAuth();
+  const canApprove = can(ACTIONS.CSV_REQUEST_APPROVE);
+  const canReject = can(ACTIONS.CSV_REQUEST_REJECT);
 
   function load() {
     setLoading(true);
@@ -50,10 +55,12 @@ export default function CsvRequests() {
                 <td><Badge status={r.status} /></td>
                 <td>
                   {r.status === "Pending" ? (
-                    <div className="flex gap-1.5">
-                      <button className="btn btn-outline btn-sm" onClick={() => decide(r.id, "Approved")}>Approve</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setNoteFor(r)}>Reject</button>
-                    </div>
+                    (canApprove || canReject) ? (
+                      <div className="flex gap-1.5">
+                        {canApprove && <button className="btn btn-outline btn-sm" onClick={() => decide(r.id, "Approved")}>Approve</button>}
+                        {canReject && <button className="btn btn-ghost btn-sm" onClick={() => setNoteFor(r)}>Reject</button>}
+                      </div>
+                    ) : <span className="text-faint text-xs">Pending</span>
                   ) : <span className="text-faint text-xs">Reviewed</span>}
                 </td>
               </tr>
@@ -62,7 +69,7 @@ export default function CsvRequests() {
         </table>
         {!loading && rows.length === 0 && <div className="p-8 text-center text-muted text-sm">No requests yet.</div>}
       </div>
-      {noteFor && (
+      {noteFor && canReject && (
         <Modal title="Reject request" onClose={() => setNoteFor(null)}
           footer={<>
             <button className="btn btn-outline" onClick={() => setNoteFor(null)}>Cancel</button>

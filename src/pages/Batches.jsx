@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Filter, AlertTriangle } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 import PageHead from "../components/PageHead";
 import Badge from "../components/Badge";
 import Modal from "../components/Modal";
@@ -44,14 +45,16 @@ function RecallModal({ batch, onClose, onConfirm }) {
 
 export default function Batches() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { can } = useAuth();
   const [batches, setBatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [recallTarget, setRecallTarget] = useState(null);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [toast, fireToast] = useToast();
-  const canRecall = user?.systemRole === "admin" || (user?.permissions || []).includes("batches.recall");
+  const canView = can(ACTIONS.BATCH_VIEW);
+  const canRecall = can(ACTIONS.BATCH_RECALL);
+  const canActivate = can(ACTIONS.BATCH_ACTIVATE);
 
   function load() {
   setLoading(true);
@@ -141,7 +144,9 @@ export default function Batches() {
           <tbody>
             {!loading && batches.map((b) => (
               <tr key={b.batch}>
-                <td className="lt-mono"><button className="row-link" onClick={() => navigate(`/batches/${b.batch}`)}>{b.batch.slice(0, 8)}…</button></td>
+                <td className="lt-mono">{canView
+                  ? <button className="row-link" onClick={() => navigate(`/batches/${b.batch}`)}>{b.batch.slice(0, 8)}…</button>
+                  : <span>{b.batch.slice(0, 8)}…</span>}</td>
                 <td>{b.productName}</td>
                 <td className="capitalize">{b.generationLevel === "BATCH" ? "Batch" : "Unit"}</td>
                 <td>{b.mfg}</td>
@@ -151,8 +156,8 @@ export default function Batches() {
                 {/* <td>{b.created ? b.created.slice(0, 10) : "—"}</td> */}
                 <td>
                   <div className="flex gap-2 items-center">
-                    <button className="row-link" onClick={() => navigate(`/batches/${b.batch}`)}> View → </button>
-                    {b.status === "IN PRODUCTION" && (
+                    {canView && <button className="row-link" onClick={() => navigate(`/batches/${b.batch}`)}> View → </button>}
+                    {b.status === "IN PRODUCTION" && canActivate && (
                       <button className="btn btn-outline btn-sm" onClick={() => activateBatch(b)} > Activate </button> )}
                     {b.status === "ACTIVE" && canRecall && (
                       <button className="btn btn-outline btn-sm" onClick={() => setRecallTarget(b)}> Recall </button>
@@ -166,7 +171,7 @@ export default function Batches() {
         {!loading && batches.length === 0 && <div className="p-8 text-center text-muted text-sm">No batches yet.</div>}
       </div>
 
-      {recallTarget && <RecallModal batch={recallTarget} onClose={() => setRecallTarget(null)} onConfirm={confirmRecall} />}
+      {recallTarget && canRecall && <RecallModal batch={recallTarget} onClose={() => setRecallTarget(null)} onConfirm={confirmRecall} />}
       <Toast toast={toast} />
     </>
   );

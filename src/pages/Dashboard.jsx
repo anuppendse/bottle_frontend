@@ -5,9 +5,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import client from "../api/client";
 import PageHead from "../components/PageHead";
 import StatCard from "../components/StatCard";
+import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { can } = useAuth();
+  const canViewBatch = can(ACTIONS.BATCH_VIEW);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
@@ -94,12 +98,14 @@ export default function Dashboard() {
             {b.scanCount} scans
           </div>
 
-          <button
-            className="text-xs font-semibold text-accent-dark mt-0.5"
-            onClick={() => navigate(`/batches/${b.batchNo}`)}
-          >
-            Investigate →
-          </button>
+          {canViewBatch && (
+            <button
+              className="text-xs font-semibold text-accent-dark mt-0.5"
+              onClick={() => navigate(`/batches/${b.batchNo}`)}
+            >
+              Investigate →
+            </button>
+          )}
         </div>
       </div>
     ))}

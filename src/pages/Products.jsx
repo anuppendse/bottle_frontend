@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 import PageHead from "../components/PageHead";
 import Modal from "../components/Modal";
 import Field from "../components/Field";
@@ -77,7 +78,7 @@ function ProductFormModal({ title, product, categories, manufacturers, onClose, 
 }
 
 export default function Products() {
-  const { user } = useAuth();
+  const { can } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [manufacturers, setManufacturers] = useState([]);
@@ -85,7 +86,10 @@ export default function Products() {
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(null);
   const [toast, fireToast] = useToast();
-  const canEdit = user?.systemRole !== "employee";
+  const canAdd = can(ACTIONS.PRODUCT_ADD);
+  const canEdit = can(ACTIONS.PRODUCT_EDIT);
+  const canToggle = can(ACTIONS.PRODUCT_STATUS);
+  const readOnly = !canAdd && !canEdit && !canToggle;
 
   // function load() {
   //   setLoading(true);
@@ -97,7 +101,13 @@ export default function Products() {
 
   function load() {
   setLoading(true);
-  Promise.all([client.get("/products"), client.get("/categories"), client.get("/manufacturers")])
+  // Categories/manufacturers are only needed to fill the add/edit form.
+  const needForm = canAdd || canEdit;
+  Promise.all([
+    client.get("/products"),
+    needForm ? client.get("/categories") : Promise.resolve({ data: [] }),
+    needForm ? client.get("/manufacturers").catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
+  ])
     .then(([p, c, m]) => { setProducts(p.data); setCategories(c.data); setManufacturers(m.data); })
     .finally(() => setLoading(false));
   }
@@ -132,8 +142,8 @@ export default function Products() {
     <>
       <PageHead
         title="Products"
-        desc={!canEdit ? "View-only access to the product catalog." : "Every product must have a category and its own shelf life before batches or labels can be created against it."}
-        action={canEdit && <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> Add product</button>}
+        desc={readOnly ? "View-only access to the product catalog." : "Every product must have a category and its own shelf life before batches or labels can be created against it."}
+        action={canAdd && <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> Add product</button>}
       />
       <div className="card table-wrap">
         <table className="lt-table">
@@ -149,10 +159,10 @@ export default function Products() {
                 <td><Badge status={p.status === "ACTIVE" ? "Active" : "Inactive"} /></td>
                 {/* <td>{canEdit && <button className="row-link" onClick={() => setEditing(p)}>Edit →</button>}</td> */}
                 <td>
-                  {canEdit && (
+                  {(canEdit || canToggle) && (
                     <div className="flex items-center gap-3">
-                      <button className="row-link" onClick={() => setEditing(p)}>Edit →</button>
-                      <button className={`row-link ${p.status === "ACTIVE" ? "text-red" : "text-green"}`} onClick={() => toggleStatus(p)}>  {p.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>
+                      {canEdit && <button className="row-link" onClick={() => setEditing(p)}>Edit →</button>}
+                      {canToggle && <button className={`row-link ${p.status === "ACTIVE" ? "text-red" : "text-green"}`} onClick={() => toggleStatus(p)}>  {p.status === "ACTIVE" ? "Deactivate" : "Activate"}</button>}
                     </div>
                    )}
                 </td>
@@ -163,14 +173,14 @@ export default function Products() {
         {!loading && products.length === 0 && <div className="p-8 text-center text-muted text-sm">No products yet.</div>}
       </div>
 
-      {/* {showCreate && <ProductFormModal title="Add product" categories={categories} onClose={() => setShowCreate(false)} onSave={saveNewProduct} />}
+      {/* {showCreate && canAdd && <ProductFormModal title="Add product" categories={categories} onClose={() => setShowCreate(false)} onSave={saveNewProduct} />}
       {editing && (
         <ProductFormModal title={`Edit product — ${editing.name}`} product={editing} categories={categories} onClose={() => setEditing(null)}
           onSave={(form) => saveEditedProduct(editing.id, form)} />
       )} */}
 
-      {showCreate && <ProductFormModal title="Add product" categories={categories} manufacturers={manufacturers} onClose={() => setShowCreate(false)} onSave={saveNewProduct} />}
-        {editing && (
+      {showCreate && canAdd && <ProductFormModal title="Add product" categories={categories} manufacturers={manufacturers} onClose={() => setShowCreate(false)} onSave={saveNewProduct} />}
+        {editing && canEdit && (
           <ProductFormModal title={`Edit product — ${editing.name}`} product={editing} categories={categories} manufacturers={manufacturers} onClose={() => setEditing(null)}
             onSave={(form) => saveEditedProduct(editing.id, form)} />
       )}

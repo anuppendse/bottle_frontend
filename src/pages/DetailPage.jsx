@@ -4,10 +4,16 @@ import { Package, AlertTriangle, ArrowLeft } from "lucide-react";
 import client from "../api/client";
 import PageHead from "../components/PageHead";
 import EmptyState from "../components/EmptyState";
+import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 
 export default function DetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { can } = useAuth();
+  const canView = can(ACTIONS.BATCH_VIEW);
+  // Activation history comes from the dispatch API — only fetch it when allowed.
+  const canSeeHistory = can(ACTIONS.BATCH_VIEW);
   const [data, setData] = useState(null);
   const [activationHistory, setActivationHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +24,9 @@ export default function DetailPage() {
   try {
     const [detailRes, historyRes] = await Promise.all([
       client.get(`/batches/${id}`),
-      client.get("/dispatch/history"),
+      canSeeHistory
+        ? client.get("/dispatch/history").catch(() => ({ data: [] }))
+        : Promise.resolve({ data: [] }),
     ]);
 
     setData(detailRes.data);
@@ -36,10 +44,13 @@ export default function DetailPage() {
 }
 
 useEffect(() => {
-  loadDetail();
-}, [id]);
+  if (canView) loadDetail();
+}, [id, canView]);
 
 
+  if (!canView) {
+    return <div className="card"><EmptyState icon={Package} title="Not permitted" desc="Viewing batch details is not in your permissions." /></div>;
+  }
   if (loading) return null;
   if (!data || !data.product) {
     return <div className="card"><EmptyState icon={Package} title="Record not found" desc="This product or batch could not be located." /></div>;

@@ -22,6 +22,7 @@ import AddUser from "./pages/AddUser";
 import Setup from "./pages/Setup";
 import Manufacturers from "./pages/Manufacturers";
 import Categories from "./pages/Categories";
+import { ACTIONS } from "./permissions/permissions";
 
 function Shell({ resourceKey, children }) {
   return (
@@ -32,18 +33,13 @@ function Shell({ resourceKey, children }) {
 }
 
 function RootRedirect() {
-  const { user, ready } = useAuth();
+  const { user, ready, can, landing } = useAuth();
   if (!ready) return null;
   if (!user) return <Navigate to="/login" replace />;
-  const landing = { admin: "/", manufacturer: "/", employee: "/products" };
-  // Defensive fallback: if systemRole is ever something unrecognized
-  // (missing, mis-cased, a role this map hasn't been updated for), fall
-  // back to "/" instead of indexing into `landing` and passing an
-  // undefined `to` into <Navigate> — that renders nothing and takes the
-  // whole app down with it, with no way to tell what happened.
-  const target = landing[user.systemRole] || "/";
-  if (target !== "/") {
-    return <Navigate to={target} replace />;
+  // Land on the dashboard if it's granted, otherwise on the first page
+  // this user's permissions allow (sidebar order).
+  if (!can("dashboard")) {
+    return <Navigate to={landing() || "/access-denied"} replace />;
   }
   return (
     <Shell resourceKey="dashboard">
@@ -69,16 +65,16 @@ export default function App() {
           <Route path="/label-generation" element={<Shell resourceKey="labelGeneration"><LabelGeneration /></Shell>} />
           {/* <Route path="/dispatch-console" element={<Shell resourceKey="dispatchConsole"><DispatchConsole /></Shell>} /> */}
           <Route path="/batches" element={<Shell resourceKey="batches"><Batches /></Shell>} />
-          <Route path="/batches/:id" element={<Shell resourceKey="batches"><DetailPage /></Shell>} />
+          <Route path="/batches/:id" element={<Shell resourceKey={ACTIONS.BATCH_VIEW}><DetailPage /></Shell>} />
           {/* <Route path="/recalls" element={<Shell resourceKey="recalls"><Recalls /></Shell>} /> */}
           <Route path="/csv-downloads" element={<Shell resourceKey="csvDownloads"><CsvDownloads /></Shell>} />
           <Route path="/csv-requests" element={<Shell resourceKey="csvRequests"><CsvRequests /></Shell>} />
           <Route path="/users" element={<Shell resourceKey="users"><Users /></Shell>} />
-          <Route path="/users/new" element={<Shell resourceKey="users"><AddUser /></Shell>} />
-          <Route path="/users/:id/edit" element={<Shell resourceKey="users"><AddUser /></Shell>} />
+          <Route path="/users/new" element={<Shell resourceKey={ACTIONS.USER_ADD}><AddUser /></Shell>} />
+          <Route path="/users/:id/edit" element={<Shell resourceKey={ACTIONS.USER_EDIT}><AddUser /></Shell>} />
           <Route path="/setup" element={<Shell resourceKey="setup"><Setup /></Shell>} />
           <Route path="/manufacturers" element={<Shell resourceKey="manufacturers"><Manufacturers /></Shell>} />
-          <Route path="/categories" element={<Shell resourceKey="products"><Categories /></Shell>} />
+          <Route path="/categories" element={<Shell resourceKey="categories"><Categories /></Shell>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

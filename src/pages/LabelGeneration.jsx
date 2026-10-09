@@ -5,8 +5,12 @@ import PageHead from "../components/PageHead";
 import Field from "../components/Field";
 import EmptyState from "../components/EmptyState";
 import Badge from "../components/Badge";
+import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 
 export default function LabelGeneration() {
+  const { can } = useAuth();
+  const canCreate = can(ACTIONS.LABEL_GENERATE);
   const [products, setProducts] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [mrp, setMrp] = useState("");
@@ -44,7 +48,7 @@ export default function LabelGeneration() {
 
   const needsCount = manufacturerLevel === "UNIT" || manufacturerLevel === "BOTH";
 
-  const canGenerate = selectedProductId && mrp && (!needsCount || (count && Number(count) > 0));
+  const canGenerate = canCreate && selectedProductId && mrp && (!needsCount || (count && Number(count) > 0));
 
   const generationLevelLabel =
     manufacturerLevel === "BATCH" ? "Batch-level" :
@@ -146,7 +150,8 @@ export default function LabelGeneration() {
           <button className="btn btn-primary w-full justify-center" disabled={!canGenerate || job === "processing"} onClick={generate}>
             <QrCode size={15} /> {job === "processing" ? "Generating…" : "Generate codes"}
           </button>
-          {!canGenerate && <div className="hint mt-2">Select a product, enter an MRP, and a positive number of units (if required) to enable generation.</div>}
+          {!canCreate && <div className="hint mt-2">You have view-only access — generating codes is not in your permissions.</div>}
+          {canCreate && !canGenerate && <div className="hint mt-2">Select a product, enter an MRP, and a positive number of units (if required) to enable generation.</div>}
           {error && <div className="err mt-2">{error}</div>}
         </div>
 

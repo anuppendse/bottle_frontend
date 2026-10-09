@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Plus, Tag } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 import PageHead from "../components/PageHead";
 import Badge from "../components/Badge";
 import Modal from "../components/Modal";
@@ -37,13 +38,16 @@ function CategoryFormModal({ title, category, onClose, onSave }) {
 }
 
 export default function Categories() {
-  const { user } = useAuth();
+  const { can } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(null);
   const [toast, fireToast] = useToast();
-  const canEdit = user?.systemRole !== "employee";
+  const canAdd = can(ACTIONS.CATEGORY_ADD);
+  const canEdit = can(ACTIONS.CATEGORY_EDIT);
+  const canToggle = can(ACTIONS.CATEGORY_STATUS);
+  const readOnly = !canAdd && !canEdit && !canToggle;
 
   function load() {
     setLoading(true);
@@ -77,8 +81,8 @@ export default function Categories() {
 
   return (
     <>
-      <PageHead title="Categories" desc={!canEdit ? "View-only access to product categories." : "Every product is assigned one of these categories."}
-        action={canEdit && <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> Add category</button>} />
+      <PageHead title="Categories" desc={readOnly ? "View-only access to product categories." : "Every product is assigned one of these categories."}
+        action={canAdd && <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> Add category</button>} />
 
       {!loading && rows.length === 0 ? (
         <div className="card"><EmptyState icon={Tag} title="No categories yet" desc="Add the first category so products can be assigned to it." /></div>
@@ -92,14 +96,12 @@ export default function Categories() {
                   <td>{c.name}</td>
                   <td><Badge status={c.status === "ACTIVE" ? "Active" : "Inactive"} /></td>
                   <td>
-                    {canEdit && (
-                      <>
-                        <button className="row-link" onClick={() => setEditing(c)}>Edit</button>
-                        <span className="mx-1.5 text-line-strong">·</span>
-                        <button className="row-link" onClick={() => toggleStatus(c)}>
-                          {c.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                        </button>
-                      </>
+                    {canEdit && <button className="row-link" onClick={() => setEditing(c)}>Edit</button>}
+                    {canEdit && canToggle && <span className="mx-1.5 text-line-strong">·</span>}
+                    {canToggle && (
+                      <button className="row-link" onClick={() => toggleStatus(c)}>
+                        {c.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                      </button>
                     )}
                   </td>
                 </tr>
@@ -109,8 +111,8 @@ export default function Categories() {
         </div>
       )}
 
-      {showCreate && <CategoryFormModal title="Add category" onClose={() => setShowCreate(false)} onSave={saveNew} />}
-      {editing && (
+      {showCreate && canAdd && <CategoryFormModal title="Add category" onClose={() => setShowCreate(false)} onSave={saveNew} />}
+      {editing && canEdit && (
         <CategoryFormModal title={`Edit — ${editing.name}`} category={editing} onClose={() => setEditing(null)}
           onSave={(form) => saveEdited(editing.id, form)} />
       )}

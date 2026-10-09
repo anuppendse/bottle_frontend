@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { QrCode, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
-const LANDING = { admin: "/", manufacturer: "/", employee: "/products" };
 
 
 
@@ -22,8 +21,9 @@ export default function Login() {
     setBusy(true);
     setError("");
     try {
-      const user = await login(email, pw);
-      navigate(LANDING[user.systemRole] || "/");
+      await login(email, pw);
+      // "/" resolves to the first page this user is permitted to see.
+      navigate("/");
     } catch (err) {
       setError(err.message);
     } finally {

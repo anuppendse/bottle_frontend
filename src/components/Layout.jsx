@@ -38,31 +38,16 @@ const PAGE_TITLES = {
 };
 
 export default function Layout({ children }) {
-  const { user, logout } = useAuth();
+  const { user, logout, can } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const isAdmin = user?.systemRole === "admin";
-  // TEMPORARY: manufacturer sees every nav item admin does (except
-  // Setup, which stays admin-only), bypassing the permissions-array
-  // check — see the matching note in ProtectedRoute.jsx and
-  // decorators.py::require_permission. Revert once real permissions
-  // are assigned to every Manufacturer account.
-  // TEMPORARY: every role sees every nav item its role is otherwise
-  // allowed to reach (except Setup, Redownload Requests, and
-  // Manufacturers, which stay admin-only), bypassing the
-  // permissions-array check entirely — same treatment as the
-  // Manufacturer-only bypass before, now applied to all roles. Revert
-  // to `(user?.permissions || []).includes(item.key)` once real
-  // permissions are assigned to every account.
-  const bypassPermCheck = true;
-  const navItems = NAV_ITEMS.filter((item) => {
-    if (item.key === "setup") return isAdmin; // never assignable — Admin only
-    if (item.key === "csvRequests") return isAdmin; // admin-only page, not a permissions-list gap
-    if (item.key === "manufacturers") return isAdmin; // top-level tenant management — Admin only
-    return bypassPermCheck || (user?.permissions || []).includes(item.key);
-  }).map((item) => (isAdmin ? item : { ...item, section: undefined }));
+  // Sidebar shows exactly the pages this user's role/user permissions
+  // grant (DB-driven — see src/permissions/permissions.js). No bypasses.
+  const navItems = NAV_ITEMS.filter((item) => can(item.key))
+    .map((item) => (isAdmin ? item : { ...item, section: undefined }));
 
   const initials = user?.name
     ? user.name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase()

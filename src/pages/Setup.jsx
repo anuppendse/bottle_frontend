@@ -4,9 +4,14 @@ import PageHead from "../components/PageHead";
 import Field from "../components/Field";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
+import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 
 export default function Setup() {
   const [toast, fireToast] = useToast();
+  const { refreshPermissions, can } = useAuth();
+  const canCreate = can(ACTIONS.SETUP_CREATE);
+  const canEditRP = can(ACTIONS.SETUP_EDIT);
 
   // -------- Create role permission (dropdown + Add) --------
   const [permissionKeys, setPermissionKeys] = useState([]);
@@ -104,6 +109,8 @@ export default function Setup() {
       console.log("Permissions updated:", res.data);
 
       fireToast("Permissions updated successfully.");
+      // Apply immediately to this session's sidebar/buttons too.
+      refreshPermissions();
     } catch (e) {
       console.error("Permission update error:", e);
 
@@ -147,6 +154,7 @@ export default function Setup() {
       />
 
       {/* Create role permission */}
+      {canCreate && (
       <div className="card mb-5">
         <div className="panel-title mb-4.5">Create role permission</div>
 
@@ -215,6 +223,8 @@ export default function Setup() {
         )}
       </div>
 
+      )}
+
       {/* Full role-permission tree */}
       <div className="card">
         <div className="panel-title mb-4.5">All role permissions</div>
@@ -256,6 +266,7 @@ export default function Setup() {
                       <input
                         type="checkbox"
                         checked={!!node.granted}
+                        disabled={!canEditRP}
                         onChange={(e) =>
                           handlePermissionToggle(node, e.target.checked)
                         }
@@ -267,7 +278,7 @@ export default function Setup() {
             </table>
 
             {/* Save button - visible only when a role is selected */}
-            <div className="mt-5 pt-4 border-t border-line flex justify-end">
+            {canEditRP && <div className="mt-5 pt-4 border-t border-line flex justify-end">
               <button
                 type="button"
                 className="btn btn-primary"
@@ -275,7 +286,7 @@ export default function Setup() {
               >
                 Save
               </button>
-            </div>
+            </div>}
           </>
         )}
       </div>

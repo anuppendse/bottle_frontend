@@ -1,216 +1,111 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { ShieldCheck } from "lucide-react";
-import client from "../api/client";
 import Field from "./Field";
+import { useAuth } from "../context/AuthContext";
 
-export default function PermissionsField({
-  selected = [],
-  onChange,
-  role = "EMPLOYEE",
-}) {
-  const [tree, setTree] = useState([]);
-  const [locked, setLocked] = useState([]);
+/**
+ * Per-user permission overrides.
+ *
+ * `nodes` are the rows from GET /permissions?user_id=<target> — the
+ * target's role permissions with their own overrides applied:
+ *   { id, key, label, parent_id, permission_id, granted, user_id? }
+ * Rows that carry `user_id` are real user_permissions rows (their `id`
+ * is the user_permission id and can be PATCHed). Rows without it fall
+ * back to the role default and can only be changed in Setup.
+ *
+ * A non-Admin editor (Manufacturer) can only grant pages they hold
+ * themselves — everything else is shown read-only.
+ */
+export default function PermissionsField({ nodes = [], onChange }) {
+  const { user: acting, can } = useAuth();
+  const isAdminEditor = acting?.systemRole === "admin";
 
-  useEffect(() => {
-    loadPermissions();
-  }, [role]);
+  // Setup and its children are Admin-only and never assigned per user.
+  const isSetup = (n) => String(n.key).toLowerCase() === "setup";
+  const parents = nodes.filter((n) => n.parent_id == null && !isSetup(n));
+  const childrenOf = (p) => nodes.filter((n) => Number(n.parent_id) === Number(p.permission_id));
 
-  async function loadPermissions() {
-    try {
-      const res = await client.get("/permissions");
+  function editable(node) {
+    if (!node.user_id) return false; // no override row → role default only
+    return isAdminEditor || can(node.key);
+  }
 
-      console.log("Permissions API response:", res.data);
-
-      /*
-       * Backend returns:
-       *
-       * {
-       *   ADMIN: [...],
-       *   MANUFACTURER: [...],
-       *   EMPLOYEE: [...]
-       * }
-       */
-
-      const rolePermissions = res.data?.[role] || [];
-
-      /*
-       * Separate parents and children
-       */
-      const parents = rolePermissions.filter(
-        (permission) => permission.parent_id === null
-      );
-
-      const children = rolePermissions.filter(
-        (permission) => permission.parent_id !== null
-      );
-
-      /*
-       * Build parent -> children structure
-       */
-      const permissionTree = parents.map((parent) => ({
-        ...parent,
-        children: children.filter(
-          (child) => child.parent_id === parent.permission_id
-        ),
-      }));
-
-      setTree(permissionTree);
-
-      /*
-       * Your current backend does not return "locked",
-       * so keep it empty.
-       */
-      setLocked([]);
-
-    } catch (error) {
-      console.error("Error loading permissions:", error);
-
-      setTree([]);
-      setLocked([]);
-    }
+  function setGranted(targets, granted) {
+    const ids = new Set(targets.map((t) => t.id));
+    onChange(nodes.map((n) => (ids.has(n.id) && n.user_id ? { ...n, granted } : n)));
   }
 
   function toggleParent(node) {
-    const childKeys = (node.children || []).map(
-      (child) => child.key
-    );
-
-    if (selected.includes(node.key)) {
-      /*
-       * Uncheck parent and all its children
-       */
-      onChange(
-        selected.filter(
-          (key) =>
-            key !== node.key &&
-            !childKeys.includes(key)
-        )
-      );
+    if (node.granted) {
+      // Unchecking a page also revokes its sub-options.
+      setGranted([node, ...childrenOf(node)], false);
     } else {
-      /*
-       * Check parent
-       */
-      onChange([
-        ...selected,
-        node.key
-      ]);
-    }
-  }
-
-  function toggleChild(key) {
-    if (selected.includes(key)) {
-      onChange(
-        selected.filter(
-          (item) => item !== key
-        )
-      );
-    } else {
-      onChange([
-        ...selected,
-        key
-      ]);
+      setGranted([node], true);
     }
   }
 
   return (
     <Field
       label="Access permissions"
-      hint="Controls which pages appear in this user's sidebar. Sub-options need their page checked first."
+      hint="Overrides this user's role defaults. Controls which pages appear in their sidebar and which actions they can take. Sub-options need their page checked first."
     >
       <div className="border border-line rounded-md bg-[#FAFAF8] px-3.5">
-
-        {tree.length === 0 ? (
-          <div className="py-4 text-[13px] text-muted">
-            No permissions available.
-          </div>
+        {parents.length === 0 ? (
+          <div className="py-4 text-[13px] text-muted">No permissions available for this role.</div>
         ) : (
-          tree.map((node) => {
-
-            const parentChecked =
-              selected.includes(node.key);
-
+          parents.map((node) => {
+            const kids = childrenOf(node);
+            const parentEditable = editable(node);
             return (
-              <div
-                className="py-2.5 border-b border-line last:border-none"
-                key={node.key}
-              >
-
-                {/* Parent permission */}
-                <label className="flex items-center gap-2.5 text-[13px] text-text font-medium cursor-pointer">
-
+              <div className="py-2.5 border-b border-line last:border-none" key={node.id}>
+                <label
+                  className={`flex items-center gap-2.5 text-[13px] text-text font-medium ${
+                    parentEditable ? "cursor-pointer" : "opacity-60 cursor-not-allowed"
+                  }`}
+                >
                   <input
                     type="checkbox"
                     className="w-3.5 h-3.5 accent-accent"
-                    checked={parentChecked}
-                    onChange={() =>
-                      toggleParent(node)
-                    }
+                    checked={!!node.granted}
+                    disabled={!parentEditable}
+                    onChange={() => toggleParent(node)}
                   />
-
-                  <span>
-                    {node.label}
-                  </span>
-
+                  <span>{node.label || node.key}</span>
+                  {!node.user_id && <span className="text-[11px] text-faint">(role default)</span>}
                 </label>
 
-
-                {/* Child permissions */}
-                {node.children &&
-                  node.children.length > 0 && (
-                    <div className="ml-[23px] mt-1.5 mb-0.5 flex flex-col gap-1.5">
-
-                      {node.children.map((child) => (
-
+                {kids.length > 0 && (
+                  <div className="ml-[23px] mt-1.5 mb-0.5 flex flex-col gap-1.5">
+                    {kids.map((child) => {
+                      const childEditable = editable(child) && !!node.granted;
+                      return (
                         <label
-                          key={child.key}
-                          className={`flex items-center gap-2.5 text-[12.5px] text-muted font-medium cursor-pointer ${
-                            !parentChecked
-                              ? "opacity-45 cursor-not-allowed"
-                              : ""
+                          key={child.id}
+                          className={`flex items-center gap-2.5 text-[12.5px] text-muted font-medium ${
+                            childEditable ? "cursor-pointer" : "opacity-45 cursor-not-allowed"
                           }`}
                         >
-
                           <input
                             type="checkbox"
                             className="w-3.5 h-3.5 accent-accent"
-                            checked={selected.includes(
-                              child.key
-                            )}
-                            disabled={!parentChecked}
-                            onChange={() =>
-                              toggleChild(child.key)
-                            }
+                            checked={!!child.granted && !!node.granted}
+                            disabled={!childEditable}
+                            onChange={() => setGranted([child], !child.granted)}
                           />
-
-                          <span>
-                            {child.label}
-                          </span>
-
+                          <span>{child.label || child.key}</span>
                         </label>
-
-                      ))}
-
-                    </div>
-                  )}
-
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })
         )}
 
-        {/* Locked permissions */}
-        {locked.map((permission) => (
-          <div
-            id={permission.id}
-            key={permission.id}
-            className="flex items-center gap-2.5 text-[13px] text-faint py-2.5"
-          >
-            <ShieldCheck size={14} />
-
-            {permission.label} — Admin only, not assignable here
-          </div>
-        ))}
-
+        <div className="flex items-center gap-2.5 text-[13px] text-faint py-2.5 border-t border-line">
+          <ShieldCheck size={14} /> Setup — Admin only, not assignable here
+        </div>
       </div>
     </Field>
   );

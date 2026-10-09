@@ -8,6 +8,8 @@ import Segmented from "../components/Segmented";
 import EmptyState from "../components/EmptyState";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
+import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 
 const CODE_TYPES = ["QR", "BARCODE", "BOTH"];
 const GENERATION_LEVELS = ["BATCH", "UNIT", "BOTH"];
@@ -114,6 +116,10 @@ export default function Manufacturers() {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [toast, fireToast] = useToast();
+  const { can } = useAuth();
+  const canAdd = can(ACTIONS.MANUFACTURER_ADD);
+  const canEdit = can(ACTIONS.MANUFACTURER_EDIT);
+  const canDelete = can(ACTIONS.MANUFACTURER_DELETE);
 
   function load() {
     setLoading(true);
@@ -145,7 +151,7 @@ export default function Manufacturers() {
   return (
     <>
       <PageHead eyebrow="Admin only" title="Manufacturers" desc="Every manufacturer organization on the platform, and their default label + contact details."
-        action={<button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> Add manufacturer</button>} />
+        action={canAdd && <button className="btn btn-primary" onClick={() => setShowCreate(true)}><Plus size={15} /> Add manufacturer</button>} />
 
       {!loading && rows.length === 0 ? (
         <div className="card"><EmptyState icon={Factory} title="No manufacturers yet" desc="Add the first manufacturer to start creating products and batches for them." /></div>
@@ -162,9 +168,9 @@ export default function Manufacturers() {
                   <td>{m.generationLevel}</td>
                   <td>{m.contactEmail || m.contactPhone || "—"}</td>
                   <td>
-                    <button className="row-link" onClick={() => setEditing(m)}>Edit</button>
-                    <span className="mx-1.5 text-line-strong">·</span>
-                    <button className="row-link text-red" onClick={() => setDeleting(m)}>Delete</button>
+                    {canEdit && <button className="row-link" onClick={() => setEditing(m)}>Edit</button>}
+                    {canEdit && canDelete && <span className="mx-1.5 text-line-strong">·</span>}
+                    {canDelete && <button className="row-link text-red" onClick={() => setDeleting(m)}>Delete</button>}
                   </td>
                 </tr>
               ))}
@@ -173,12 +179,12 @@ export default function Manufacturers() {
         </div>
       )}
 
-      {showCreate && <ManufacturerFormModal title="Add manufacturer" onClose={() => setShowCreate(false)} onSave={saveNew} />}
-      {editing && (
+      {showCreate && canAdd && <ManufacturerFormModal title="Add manufacturer" onClose={() => setShowCreate(false)} onSave={saveNew} />}
+      {editing && canEdit && (
         <ManufacturerFormModal title={`Edit — ${editing.name}`} manufacturer={editing} onClose={() => setEditing(null)}
           onSave={(form) => saveEdited(editing.id, form)} />
       )}
-      {deleting && <DeleteConfirmModal manufacturer={deleting} onClose={() => setDeleting(null)} onConfirm={confirmDelete} />}
+      {deleting && canDelete && <DeleteConfirmModal manufacturer={deleting} onClose={() => setDeleting(null)} onConfirm={confirmDelete} />}
       <Toast toast={toast} />
     </>
   );

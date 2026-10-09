@@ -6,11 +6,12 @@ import { useAuth } from "../context/AuthContext";
 import PageHead from "../components/PageHead";
 import Field from "../components/Field";
 import PermissionsField from "../components/PermissionsField";
+import { ACTIONS } from "../permissions/permissions";
 
 const ALL_ROLES = ["Admin", "Manufacturer", "Employee"];
 
 export default function AddUser() {
-  const { user: acting } = useAuth();
+  const { user: acting, can, refreshPermissions } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const restricted = acting?.systemRole === "manufacturer";
@@ -29,7 +30,10 @@ export default function AddUser() {
   const [manufacturers, setManufacturers] = useState([]);
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [permissions, setPermissions] = useState([]);
+  // Per-user permission rows from GET /permissions?user_id=<id>
+  const [permNodes, setPermNodes] = useState([]);
+  const [originalRole, setOriginalRole] = useState("");
+  const canEditPermissions = editing && can(ACTIONS.USER_PERMISSIONS);
   const [error, setError] = useState("");
 
   // Admin needs a manufacturer picker when the role is Employee
@@ -56,21 +60,31 @@ export default function AddUser() {
       if (u) {
         setName(u.name);
         setEmail(u.email);
-        setRole(u.role);
-        setPermissions(u.permissions || []);
+        // Backend returns "EMPLOYEE"; the select uses "Employee".
+        const r = u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1).toLowerCase() : "";
+        setRole(r);
+        setOriginalRole(r);
         setManufacturerId(u.manufacturerId || "");
       }
     });
   }, [id, editing]);
 
-  // Pull DB-backed role defaults whenever the role changes — only when
-  // creating, so we don't clobber an existing user's saved permissions.
+  // Load this user's effective permissions (role defaults + their own
+  // overrides) so they can be adjusted per user.
   useEffect(() => {
-    if (editing || !role) return;
+    if (!editing || !canEditPermissions) return;
     client
-      .get(`/permissions/role-defaults?role=${encodeURIComponent(role)}`)
-      .then((res) => setPermissions(res.data.permissions));
-  }, [role, editing]);
+      .get("/permissions", { params: { user_id: id } })
+      .then((res) => setPermNodes(res.data?.user_permissions || []))
+      .catch(() => setPermNodes([]));
+  }, [id, editing, canEditPermissions]);
+
+  // Permission rows belong to the user's CURRENT role — hide the editor
+  // while the role is being changed so we never save the old role's rows.
+  const roleChanged =
+    editing && originalRole && role.toUpperCase() !== originalRole.toUpperCase();
+  const showPermissions =
+    canEditPermissions && !roleChanged && role.toUpperCase() !== "ADMIN";
 
   async function save() {
     if (!name.trim() || !email.trim() || !role.trim()) {
@@ -96,7 +110,6 @@ export default function AddUser() {
         email,
         username: email,
         role,
-        permissions,
         password: password || undefined,
       };
 
@@ -105,6 +118,19 @@ export default function AddUser() {
 
       if (editing) {
         await client.put(`/users/${id}`, payload);
+
+        // Save per-user permission overrides (only rows that are real
+        // user_permissions rows can be patched).
+        if (showPermissions) {
+          const rows = permNodes.filter((n) => n.user_id);
+          if (rows.length) {
+            await client.patch(`/permissions/user-permissions/${id}`, {
+              user_permission_ids: rows.map((n) => n.id),
+              granted_perms: rows.map((n) => !!n.granted),
+            });
+          }
+          if (id === acting?.id) await refreshPermissions();
+        }
       } else {
         await client.post("/users", payload);
       }
@@ -212,8 +238,13 @@ export default function AddUser() {
             </select>
           </Field>
         )}
-        {editing && role === "Employee" && (
-          <PermissionsField selected={permissions} onChange={setPermissions} />
+        {showPermissions && (
+          <PermissionsField nodes={permNodes} onChange={setPermNodes} />
+        )}
+        {canEditPermissions && roleChanged && (
+          <div className="hint mb-4">
+            Save the role change first — then reopen this user to adjust their permissions for the new role.
+          </div>
         )}
         <div className="flex gap-2.5 mt-2">
           <button

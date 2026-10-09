@@ -6,12 +6,18 @@ import PageHead from "../components/PageHead";
 import Badge from "../components/Badge";
 import Toast from "../components/Toast";
 import useToast from "../components/useToast";
+import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 
 export default function Users() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, fireToast] = useToast();
+  const { can } = useAuth();
+  const canAdd = can(ACTIONS.USER_ADD);
+  const canEdit = can(ACTIONS.USER_EDIT);
+  const canToggle = can(ACTIONS.USER_STATUS);
 
   function load() {
     setLoading(true);
@@ -37,12 +43,14 @@ export default function Users() {
         title="Users"
         desc="Every account with access to LabelTrack, and the role assigned to it."
         action={
-          <button
-            className="btn btn-primary"
-            onClick={() => navigate("/users/new")}
-          >
-            <Plus size={15} /> Add user
-          </button>
+          canAdd && (
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate("/users/new")}
+            >
+              <Plus size={15} /> Add user
+            </button>
+          )
         }
       />
       <div className="card table-wrap">
@@ -79,18 +87,22 @@ export default function Users() {
                     <Badge status={u.status} />
                   </td>
                   <td>
-                    <button
-                      className="row-link"
-                      onClick={() => navigate(`/users/${u.id}/edit`)}
-                    >
-                      Edit
-                    </button>
-                    <span className="mx-1.5 text-line-strong">·</span>
-                    <button className="row-link" onClick={() => toggle(u)}>
-                      {u.status?.toUpperCase() === "ACTIVE"
-                        ? "Deactivate"
-                        : "Activate"}
-                    </button>
+                    {canEdit && (
+                      <button
+                        className="row-link"
+                        onClick={() => navigate(`/users/${u.id}/edit`)}
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {canEdit && canToggle && <span className="mx-1.5 text-line-strong">·</span>}
+                    {canToggle && (
+                      <button className="row-link" onClick={() => toggle(u)}>
+                        {u.status?.toUpperCase() === "ACTIVE"
+                          ? "Deactivate"
+                          : "Activate"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

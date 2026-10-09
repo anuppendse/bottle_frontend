@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Download, FileWarning } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { ACTIONS } from "../permissions/permissions";
 import PageHead from "../components/PageHead";
 import Badge from "../components/Badge";
 import Modal from "../components/Modal";
@@ -10,7 +11,9 @@ import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 
 export default function CsvDownloads() {
-  const { user } = useAuth();
+  const { user, can } = useAuth();
+  const canDownload = can(ACTIONS.CSV_DOWNLOAD);
+  const canRequest = can(ACTIONS.CSV_REQUEST_REDOWNLOAD);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [requestFor, setRequestFor] = useState(null);
@@ -70,8 +73,8 @@ export default function CsvDownloads() {
                 <td><Badge status={r.status} /></td>
                 <td>
                   {r.canDownloadNow
-                    ? <button className="btn btn-outline btn-sm" onClick={() => download(r)}><Download size={13} /> Download</button>
-                    : <button className="btn btn-ghost btn-sm" onClick={() => setRequestFor(r)}><FileWarning size={13} /> Request redownload</button>}
+                    ? (canDownload && <button className="btn btn-outline btn-sm" onClick={() => download(r)}><Download size={13} /> Download</button>)
+                    : (canRequest && <button className="btn btn-ghost btn-sm" onClick={() => setRequestFor(r)}><FileWarning size={13} /> Request redownload</button>)}
                 </td>
               </tr>
             ))}
@@ -80,7 +83,7 @@ export default function CsvDownloads() {
         {!loading && rows.length === 0 && <div className="p-8 text-center text-muted text-sm">No exports yet.</div>}
       </div>
 
-      {requestFor && (
+      {requestFor && canRequest && (
         <Modal title="Request redownload" onClose={() => setRequestFor(null)}
           footer={<>
             <button className="btn btn-outline" onClick={() => setRequestFor(null)}>Cancel</button>
