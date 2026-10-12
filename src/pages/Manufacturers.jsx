@@ -12,7 +12,14 @@ import { useAuth } from "../context/AuthContext";
 import { ACTIONS } from "../permissions/permissions";
 
 const CODE_TYPES = ["QR", "BARCODE", "BOTH"];
-const GENERATION_LEVELS = ["BATCH", "UNIT", "BOTH"];
+const GENERATION_LEVELS = ["BATCH", "UNIT"];
+
+const STATUS_ACTIVE = "ACTIVE";
+const STATUS_INACTIVE = "INACTIVE";
+
+function isActive(m) {
+  return String(m.status || STATUS_ACTIVE).toUpperCase() === STATUS_ACTIVE;
+}
 
 function ManufacturerFormModal({ title, manufacturer, onClose, onSave }) {
   const [name, setName] = useState(manufacturer?.name || "");
@@ -78,9 +85,11 @@ function ManufacturerFormModal({ title, manufacturer, onClose, onSave }) {
   );
 }
 
-function DeleteConfirmModal({ manufacturer, onClose, onConfirm }) {
+function StatusConfirmModal({ manufacturer, onClose, onConfirm }) {
   const [error, setError] = useState("");
-  const blocked = manufacturer.productsCount > 0 || manufacturer.usersCount > 0;
+  const active = isActive(manufacturer);
+  // Only block when inactivating; activating is always allowed.
+  const blocked = active && (manufacturer.productsCount > 0 || manufacturer.usersCount > 0);
 
   async function handleConfirm() {
     try {
@@ -91,18 +100,23 @@ function DeleteConfirmModal({ manufacturer, onClose, onConfirm }) {
   }
 
   return (
-    <Modal title="Delete manufacturer" onClose={onClose}
+    <Modal title={active ? "Inactivate manufacturer" : "Activate manufacturer"} onClose={onClose}
       footer={<>
         <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-        <button className="btn btn-danger" disabled={blocked} onClick={handleConfirm}>Delete</button>
+        <button className={active ? "btn btn-danger" : "btn btn-primary"} disabled={blocked} onClick={handleConfirm}>
+          {active ? "Inactivate" : "Activate"}
+        </button>
       </>}>
       <div className="kv-row"><span className="kv-label">Manufacturer</span><span className="kv-val">{manufacturer.name}</span></div>
+      <div className="kv-row"><span className="kv-label">Current status</span><span className="kv-val">{active ? "Active" : "Inactive"}</span></div>
       <div className="kv-row"><span className="kv-label">Products</span><span className="kv-val">{manufacturer.productsCount ?? 0}</span></div>
       <div className="kv-row"><span className="kv-label">Users</span><span className="kv-val">{manufacturer.usersCount ?? 0}</span></div>
       {blocked ? (
         <div className="err mt-3">This manufacturer still has products and/or users attached — reassign or remove them first.</div>
       ) : (
-        <div className="hint mt-3">This can't be undone.</div>
+        <div className="hint mt-3">
+          {active ? "You can activate this manufacturer again at any time." : "This manufacturer will become active again."}
+        </div>
       )}
       {error && <div className="err mt-2">{error}</div>}
     </Modal>
@@ -114,12 +128,12 @@ export default function Manufacturers() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [deleting, setDeleting] = useState(null);
+  const [togglingStatus, setTogglingStatus] = useState(null);
   const [toast, fireToast] = useToast();
   const { can } = useAuth();
   const canAdd = can(ACTIONS.MANUFACTURER_ADD);
   const canEdit = can(ACTIONS.MANUFACTURER_EDIT);
-  const canDelete = can(ACTIONS.MANUFACTURER_DELETE);
+  const canInactive = can(ACTIONS.MANUFACTURER_DELETE);
 
   function load() {
     setLoading(true);
@@ -141,11 +155,14 @@ export default function Manufacturers() {
     fireToast(`${res.data.name} updated.`);
   }
 
-  async function confirmDelete() {
-    await client.delete(`/manufacturers/${deleting.id}`);
-    setRows((rs) => rs.filter((r) => r.id !== deleting.id));
-    fireToast(`${deleting.name} deleted.`);
-    setDeleting(null);
+  async function confirmStatusChange() {
+    const target = togglingStatus;
+    const newStatus = isActive(target) ? STATUS_INACTIVE : STATUS_ACTIVE;
+    const res = await client.post(`/manufacturers/${target.id}/status`, { status: newStatus });
+    const updatedStatus = res.data?.status || newStatus;
+    setRows((rs) => rs.map((r) => (r.id === target.id ? { ...r, status: updatedStatus } : r)));
+    fireToast(`${target.name} ${newStatus === STATUS_ACTIVE ? "activated" : "inactivated"}.`);
+    setTogglingStatus(null);
   }
 
   return (
@@ -158,7 +175,7 @@ export default function Manufacturers() {
       ) : (
         <div className="card table-wrap">
           <table className="lt-table">
-            <thead><tr><th>Name</th><th>Company name</th><th>Code type</th><th>Generation level</th><th>Contact</th><th></th></tr></thead>
+            <thead><tr><th>Name</th><th>Company name</th><th>Code type</th><th>Generation level</th><th>Status</th><th>Contact</th><th></th></tr></thead>
             <tbody>
               {!loading && rows.map((m) => (
                 <tr key={m.id}>
@@ -166,11 +183,16 @@ export default function Manufacturers() {
                   <td>{m.companyName || "—"}</td>
                   <td>{m.codeType}</td>
                   <td>{m.generationLevel}</td>
+                  <td>{isActive(m) ? "Active" : "Inactive"}</td>
                   <td>{m.contactEmail || m.contactPhone || "—"}</td>
                   <td>
                     {canEdit && <button className="row-link" onClick={() => setEditing(m)}>Edit</button>}
-                    {canEdit && canDelete && <span className="mx-1.5 text-line-strong">·</span>}
-                    {canDelete && <button className="row-link text-red" onClick={() => setDeleting(m)}>Delete</button>}
+                    {canEdit && canInactive && <span className="mx-1.5 text-line-strong">·</span>}
+                    {canInactive && (
+                      <button className={isActive(m) ? "row-link text-red" : "row-link"} onClick={() => setTogglingStatus(m)}>
+                        {isActive(m) ? "Inactivate" : "Activate"}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -184,7 +206,9 @@ export default function Manufacturers() {
         <ManufacturerFormModal title={`Edit — ${editing.name}`} manufacturer={editing} onClose={() => setEditing(null)}
           onSave={(form) => saveEdited(editing.id, form)} />
       )}
-      {deleting && canDelete && <DeleteConfirmModal manufacturer={deleting} onClose={() => setDeleting(null)} onConfirm={confirmDelete} />}
+      {togglingStatus && canInactive && (
+        <StatusConfirmModal manufacturer={togglingStatus} onClose={() => setTogglingStatus(null)} onConfirm={confirmStatusChange} />
+      )}
       <Toast toast={toast} />
     </>
   );
