@@ -35,23 +35,21 @@ export default function AddUser() {
   const [originalRole, setOriginalRole] = useState("");
   const canEditPermissions = editing && can(ACTIONS.USER_PERMISSIONS);
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
 
-  // Admin needs a manufacturer picker when the role is Employee
-  // (Manufacturer-role actors are already scoped to their own org).
   useEffect(() => {
-    if (!restricted) {
-      client
-        .get("/users")
-        .then((res) => {
-          const manufacturerUsers = res.data.filter(
-            (user) => user.role?.toUpperCase() === "MANUFACTURER",
-          );
-
-          setManufacturers(manufacturerUsers);
-        })
-        .catch(() => {});
-    }
-  }, [restricted]);
+    client
+      .get("/manufacturers")
+      .then((res) => {
+        // only active manufacturers can be picked
+        setManufacturers(
+          res.data.filter(
+            (m) => String(m.status || "ACTIVE").toUpperCase() === "ACTIVE",
+          ),
+        );
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!editing) return;
@@ -61,7 +59,9 @@ export default function AddUser() {
         setName(u.name);
         setEmail(u.email);
         // Backend returns "EMPLOYEE"; the select uses "Employee".
-        const r = u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1).toLowerCase() : "";
+        const r = u.role
+          ? u.role.charAt(0).toUpperCase() + u.role.slice(1).toLowerCase()
+          : "";
         setRole(r);
         setOriginalRole(r);
         setManufacturerId(u.manufacturerId || "");
@@ -82,7 +82,9 @@ export default function AddUser() {
   // Permission rows belong to the user's CURRENT role — hide the editor
   // while the role is being changed so we never save the old role's rows.
   const roleChanged =
-    editing && originalRole && role.toUpperCase() !== originalRole.toUpperCase();
+    editing &&
+    originalRole &&
+    role.toUpperCase() !== originalRole.toUpperCase();
   const showPermissions =
     canEditPermissions && !roleChanged && role.toUpperCase() !== "ADMIN";
 
@@ -95,8 +97,12 @@ export default function AddUser() {
       setError("Set a password for this account.");
       return;
     }
-    if (restricted && role !== "Employee") {
-      setError("Admin and Manufacturer roles must be created by an Admin.");
+    if (
+      !restricted &&
+      (role === "Employee" || role === "Manufacturer") &&
+      !manufacturerId
+    ) {
+      setError("Admin roles must be created by an Admin.");
       return;
     }
     if (!restricted && role === "Employee" && !manufacturerId) {
@@ -104,6 +110,7 @@ export default function AddUser() {
       return;
     }
     setError("");
+    setEmailError("");
     try {
       const payload = {
         name,
@@ -113,7 +120,7 @@ export default function AddUser() {
         password: password || undefined,
       };
 
-      if (!restricted && role === "Employee")
+      if  (role === "Employee" || role === "Manufacturer")
         payload.manufacturer_id = manufacturerId;
 
       if (editing) {
@@ -136,7 +143,9 @@ export default function AddUser() {
       }
       navigate("/users");
     } catch (e) {
-      setError(e.message);
+      // username/email duplicate messages go under the email field
+      if (/username|email/i.test(e.message)) setEmailError(e.message);
+      else setError(e.message);
     }
   }
 
@@ -154,14 +163,18 @@ export default function AddUser() {
         }
       />
       <div className="card" style={{ maxWidth: 560 }}>
-        <Field label="Username or email">
+        <Field label="Username or email" error={emailError}>
           <input
             className="input"
             placeholder="name@company.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setEmailError("");
+            }}
           />
         </Field>
+
         <Field label="Full name">
           <input
             className="input"
@@ -217,7 +230,7 @@ export default function AddUser() {
             ))}
           </select>
         </Field>
-        {!restricted && role === "Employee" && (
+        {(role === "Employee" || role === "Manufacturer") && (
           <Field
             label="Manufacturer"
             hint="Determines which manufacturer's data this account is scoped to — and which manufacturer's default permissions apply."
@@ -226,15 +239,21 @@ export default function AddUser() {
               className="input"
               value={manufacturerId}
               onChange={(e) => setManufacturerId(e.target.value)}
+              disabled={restricted}
             >
               <option value="">Select a manufacturer…</option>
-              {manufacturers
-                .filter((m) => m.manufacturerId)
-                .map((m) => (
-                  <option key={m.manufacturerId} value={m.manufacturerId}>
-                    {m.name}
+              {manufacturers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+              {/* fallback if the list call is blocked for Manufacturer users */}
+              {restricted &&
+                !manufacturers.some((m) => m.id === acting.manufacturerId) && (
+                  <option value={acting.manufacturerId}>
+                    {acting.manufacturerName || "Your manufacturer"}
                   </option>
-                ))}
+                )}
             </select>
           </Field>
         )}
@@ -243,7 +262,8 @@ export default function AddUser() {
         )}
         {canEditPermissions && roleChanged && (
           <div className="hint mb-4">
-            Save the role change first — then reopen this user to adjust their permissions for the new role.
+            Save the role change first — then reopen this user to adjust their
+            permissions for the new role.
           </div>
         )}
         <div className="flex gap-2.5 mt-2">

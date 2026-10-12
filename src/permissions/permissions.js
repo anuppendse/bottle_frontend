@@ -81,11 +81,11 @@ const ROLE_CEILING = {
   product: ["admin", "manufacturer", "employee"],
   categories: ["admin", "manufacturer", "employee"],
   lable_generation: ["admin", "manufacturer"],
-  batch_management: ["admin", "manufacturer"],
+  batch_management: ["admin", "manufacturer","employee"],
   csv_downloads: ["admin", "manufacturer", "employee"],
-  redownload_request: ["admin"],
+  redownload_request: ["admin", "manufacturer"],
   user: ["admin", "manufacturer"],
-  manufacturer: ["admin"],
+  manufacturer: ["admin", "manufacturer"],
   setup: ["admin"],
 };
 
