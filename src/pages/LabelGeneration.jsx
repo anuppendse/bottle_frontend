@@ -28,23 +28,16 @@ export default function LabelGeneration() {
   }, []);
 
   // Resolve the manufacturer's config as soon as a product is picked.
-  useEffect(() => {
-    if (!selectedProductId) {
-      setManufacturerLevel(null);
-      setManufacturerCodeType(null);
-      return;
-    }
-    client
-      .get("/products/resolve", { params: { productId: selectedProductId } })
-      .then((res) => {
-        setManufacturerLevel(res.data.generationLevel);
-        setManufacturerCodeType(res.data.codeType);
-      })
-      .catch(() => {
-        setManufacturerLevel(null);
-        setManufacturerCodeType(null);
-      });
-  }, [selectedProductId]);
+useEffect(() => {
+  if (!selectedProductId) {
+    setManufacturerLevel(null);
+    setManufacturerCodeType(null);
+    return;
+  }
+  const selected = products.find((p) => String(p.id) === String(selectedProductId));
+  setManufacturerLevel(selected?.generationLevel || null);
+  setManufacturerCodeType(selected?.codeType || null);
+}, [selectedProductId, products]);
 
   const needsCount = manufacturerLevel === "UNIT" || manufacturerLevel === "BOTH";
 
