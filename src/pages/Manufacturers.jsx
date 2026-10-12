@@ -190,7 +190,7 @@ export default function Manufacturers() {
                     {canEdit && canInactive && <span className="mx-1.5 text-line-strong">·</span>}
                     {canInactive && (
                       <button className={isActive(m) ? "row-link text-red" : "row-link"} onClick={() => setTogglingStatus(m)}>
-                        {isActive(m) ? "Inactivate" : "Activate"}
+                        {isActive(m) ? "Dectivate" : "Activate"}
                       </button>
                     )}
                   </td>

@@ -86,7 +86,7 @@ const ROLE_CEILING = {
   redownload_request: ["admin", "manufacturer"],
   user: ["admin", "manufacturer"],
   manufacturer: ["admin", "manufacturer"],
-  setup: ["admin"],
+  setup: ["admin","manufacturer"],
 };
 
 // Lockout guard: an Admin can always open Setup and edit role

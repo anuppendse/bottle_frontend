@@ -5,22 +5,95 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 //   Download, LogOut, ChevronDown, ClipboardList, Settings, Truck, KeyRound, Factory, Tags,
 // } from "lucide-react";
 import {
-  LayoutDashboard, Users as UsersIcon, Package, QrCode, Boxes, Download, LogOut, ChevronDown, ClipboardList, Settings, KeyRound, Factory, Tags,} from "lucide-react";
+  LayoutDashboard,
+  Users as UsersIcon,
+  Package,
+  QrCode,
+  Boxes,
+  Download,
+  LogOut,
+  ChevronDown,
+  ClipboardList,
+  Settings,
+  KeyRound,
+  Factory,
+  Tags,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
-  { key: "dashboard", to: "/", label: "Dashboard", icon: LayoutDashboard, section: "Overview" },
-  { key: "products", to: "/products", label: "Products", icon: Package, section: "Operate" },
-  { key: "categories", to: "/categories", label: "Categories", icon: Tags, section: "Operate" },
-  { key: "labelGeneration", to: "/label-generation", label: "Label Generation", icon: QrCode, section: "Operate" },
+  {
+    key: "dashboard",
+    to: "/",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    section: "Overview",
+  },
+  {
+    key: "products",
+    to: "/products",
+    label: "Products",
+    icon: Package,
+    section: "Operate",
+  },
+  {
+    key: "categories",
+    to: "/categories",
+    label: "Categories",
+    icon: Tags,
+    section: "Operate",
+  },
+  {
+    key: "labelGeneration",
+    to: "/label-generation",
+    label: "Label Generation",
+    icon: QrCode,
+    section: "Operate",
+  },
   // { key: "dispatchConsole", to: "/dispatch-console", label: "Dispatch Console", icon: Truck, section: "Operate" },
-  { key: "batches", to: "/batches", label: "Batch Management", icon: Boxes, section: "Operate" },
+  {
+    key: "batches",
+    to: "/batches",
+    label: "Batch Management",
+    icon: Boxes,
+    section: "Operate",
+  },
   // { key: "recalls", to: "/recalls", label: "Recall Management", icon: AlertTriangle, section: "Operate" },
-  { key: "csvDownloads", to: "/csv-downloads", label: "CSV Downloads", icon: Download, section: "Operate" },
-  { key: "csvRequests", to: "/csv-requests", label: "Redownload Requests", icon: ClipboardList, section: "Operate" },
-  { key: "users", to: "/users", label: "Users", icon: UsersIcon, section: "Admin only" },
-  { key: "manufacturers", to: "/manufacturers", label: "Manufacturers", icon: Factory, section: "Admin only" },
-  { key: "setup", to: "/setup", label: "Setup", icon: Settings, section: "Admin only" },
+  {
+    key: "csvDownloads",
+    to: "/csv-downloads",
+    label: "CSV Downloads",
+    icon: Download,
+    section: "Operate",
+  },
+  {
+    key: "csvRequests",
+    to: "/csv-requests",
+    label: "Redownload Requests",
+    icon: ClipboardList,
+    section: "Operate",
+  },
+  {
+    key: "users",
+    to: "/users",
+    label: "Users",
+    icon: UsersIcon,
+    section: "Admin only",
+  },
+  {
+    key: "manufacturers",
+    to: "/manufacturers",
+    label: "Manufacturers",
+    icon: Factory,
+    section: "Admin only",
+  },
+  {
+    key: "setup",
+    to: "/setup",
+    label: "Setup",
+    icon: Settings,
+    section: "Admin only",
+  },
 ];
 
 // const PAGE_TITLES = {
@@ -32,9 +105,18 @@ const NAV_ITEMS = [
 // };
 
 const PAGE_TITLES = {
-  "/": "Dashboard", "/products": "Products", "/categories": "Categories", "/label-generation": "Label generation", "/batches": "Batch management", "/csv-downloads": "CSV downloads",
-  "/csv-requests": "Redownload requests", "/users": "Users", "/users/new": "Add user",
-  "/setup": "Setup", "/manufacturers": "Manufacturers",
+  "/": "Dashboard",
+  "/products": "Products",
+  "/categories": "Categories",
+  "/label-generation": "Label generation",
+  "/batches": "Batch management",
+  "/csv-downloads": "CSV downloads",
+  "/csv-requests": "Redownload requests",
+  "/users": "Users",
+  "/users/new": "Add user",
+  "/setup": "Setup",
+  "/manufacturers": "Manufacturers",
+  "/account-settings": "Account settings",
 };
 
 export default function Layout({ children }) {
@@ -46,15 +128,28 @@ export default function Layout({ children }) {
   const isAdmin = user?.systemRole === "admin";
   // Sidebar shows exactly the pages this user's role/user permissions
   // grant (DB-driven — see src/permissions/permissions.js). No bypasses.
-  const navItems = NAV_ITEMS.filter((item) => can(item.key))
-    .map((item) => (isAdmin ? item : { ...item, section: undefined }));
+  const navItems = NAV_ITEMS.filter((item) => can(item.key)).map((item) =>
+    isAdmin ? item : { ...item, section: undefined },
+  );
 
   const initials = user?.name
-    ? user.name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase()
+    ? user.name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase()
     : "??";
 
-  const title = Object.keys(PAGE_TITLES).find((p) => location.pathname.startsWith(p) && p !== "/")
-    ? PAGE_TITLES[Object.keys(PAGE_TITLES).find((p) => location.pathname.startsWith(p) && p !== "/")]
+  const title = Object.keys(PAGE_TITLES).find(
+    (p) => location.pathname.startsWith(p) && p !== "/",
+  )
+    ? PAGE_TITLES[
+        Object.keys(PAGE_TITLES).find(
+          (p) => location.pathname.startsWith(p) && p !== "/",
+        )
+      ]
     : PAGE_TITLES[location.pathname] || "";
 
   function doLogout() {
@@ -70,8 +165,12 @@ export default function Layout({ children }) {
             <QrCode size={16} />
           </div>
           <div>
-            <div className="font-bold text-[15.5px] text-white tracking-[.2px]">LabelTrack</div>
-            <div className="text-[10.5px] text-[#7C8AA3] mt-px">Batch &amp; Label Platform</div>
+            <div className="font-bold text-[15.5px] text-white tracking-[.2px]">
+              LabelTrack
+            </div>
+            <div className="text-[10.5px] text-[#7C8AA3] mt-px">
+              Batch &amp; Label Platform
+            </div>
           </div>
         </div>
         <nav className="px-3 py-3.5 flex-1 overflow-y-auto">
@@ -127,7 +226,13 @@ export default function Layout({ children }) {
                 className="absolute top-[46px] right-0 bg-white border border-line rounded-lg shadow-xl min-w-[190px] p-1.5 z-30"
                 onMouseLeave={() => setMenuOpen(false)}
               >
-                <button className="flex items-center gap-2.5 w-full px-2.5 py-2 text-[13px] rounded-md hover:bg-paper text-left">
+                <button
+                  className="flex items-center gap-2.5 w-full px-2.5 py-2 text-[13px] rounded-md hover:bg-paper text-left"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    navigate("/account-settings");
+                  }}
+                >
                   <KeyRound size={14} /> Account settings
                 </button>
                 <button

@@ -23,6 +23,7 @@ import Setup from "./pages/Setup";
 import Manufacturers from "./pages/Manufacturers";
 import Categories from "./pages/Categories";
 import { ACTIONS } from "./permissions/permissions";
+import AccountSettings from "./pages/AccountSettings";
 
 function Shell({ resourceKey, children }) {
   return (
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="/categories" element={<Shell resourceKey="categories"><Categories /></Shell>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/account-settings" element={<AccountSettings />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
