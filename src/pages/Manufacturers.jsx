@@ -10,6 +10,7 @@ import Toast from "../components/Toast";
 import useToast from "../components/useToast";
 import { useAuth } from "../context/AuthContext";
 import { ACTIONS } from "../permissions/permissions";
+import Badge from "../components/Badge";
 
 const CODE_TYPES = ["QR", "BARCODE", "BOTH"];
 const GENERATION_LEVELS = ["BATCH", "UNIT"];
@@ -183,14 +184,14 @@ export default function Manufacturers() {
                   <td>{m.companyName || "—"}</td>
                   <td>{m.codeType}</td>
                   <td>{m.generationLevel}</td>
-                  <td>{isActive(m) ? "Active" : "Inactive"}</td>
+                  <td><Badge status={isActive(m) ? "Active" : "Inactive"}/></td>
                   <td>{m.contactEmail || m.contactPhone || "—"}</td>
                   <td>
                     {canEdit && <button className="row-link" onClick={() => setEditing(m)}>Edit</button>}
                     {canEdit && canInactive && <span className="mx-1.5 text-line-strong">·</span>}
                     {canInactive && (
-                      <button className={isActive(m) ? "row-link text-red" : "row-link"} onClick={() => setTogglingStatus(m)}>
-                        {isActive(m) ? "Dectivate" : "Activate"}
+                      <button className={isActive(m) ? "row-link" : "row-link"} onClick={() => setTogglingStatus(m)}>
+                        {isActive(m) ? "Inactivate" : "Activate"}
                       </button>
                     )}
                   </td>

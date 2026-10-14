@@ -59,7 +59,7 @@ export default function Users() {
             <tr>
               <th>Name</th>
               <th>Email</th>
-              
+
               <th>Role</th>
               <th>Manufacturer</th>
               <th>Status</th>
@@ -79,12 +79,18 @@ export default function Users() {
                 <tr key={u.id}>
                   <td>{u.name}</td>
                   <td>{u.email}</td>
-                  
+
                   <td>{u.role}</td>
                   <td>{u.manufacturer}</td>
 
                   <td>
-                    <Badge status={u.status} />
+                    <Badge
+                      status={
+                        String(u.status).toUpperCase() === "ACTIVE"
+                          ? "Active"
+                          : "Inactive"
+                      }
+                    />
                   </td>
                   <td>
                     {canEdit && (
@@ -95,11 +101,13 @@ export default function Users() {
                         Edit
                       </button>
                     )}
-                    {canEdit && canToggle && <span className="mx-1.5 text-line-strong">·</span>}
+                    {canEdit && canToggle && (
+                      <span className="mx-1.5 text-line-strong">·</span>
+                    )}
                     {canToggle && (
                       <button className="row-link" onClick={() => toggle(u)}>
                         {u.status?.toUpperCase() === "ACTIVE"
-                          ? "Deactivate"
+                          ? "Inactivate"
                           : "Activate"}
                       </button>
                     )}

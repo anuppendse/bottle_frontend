@@ -100,7 +100,7 @@ export default function Categories() {
                     {canEdit && canToggle && <span className="mx-1.5 text-line-strong">·</span>}
                     {canToggle && (
                       <button className="row-link" onClick={() => toggleStatus(c)}>
-                        {c.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                        {c.status === "ACTIVE" ? "Inactivate" : "Activate"}
                       </button>
                     )}
                   </td>
